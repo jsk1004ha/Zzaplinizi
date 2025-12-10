@@ -2,42 +2,45 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>RPG V10: Visuals & Stability</title>
+    <title>RPG V11: The Endless World</title>
     <style>
         /* CSS Styles */
         body { margin: 0; overflow: hidden; background: #050505; color: #ccc; font-family: 'Segoe UI', sans-serif; user-select: none; }
         canvas { display: block; cursor: crosshair; }
 
         /* UI Base */
-        .ui-win { position: absolute; background: rgba(16, 18, 20, 0.95); border: 1px solid #444; border-radius: 4px; padding: 8px; box-shadow: 0 0 15px #000; pointer-events: auto; transition: height 0.3s; overflow: hidden; }
-        .ui-head { background: linear-gradient(90deg, #222, #333); color: #ec0; padding: 5px; text-align: center; font-weight: bold; border-bottom: 1px solid #555; margin: -8px -8px 8px -8px; border-radius: 4px 4px 0 0; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
+        .ui-win { position: absolute; background: rgba(10, 12, 14, 0.95); border: 1px solid #444; border-radius: 2px; padding: 8px; box-shadow: 0 0 15px #000; pointer-events: auto; transition: height 0.3s; overflow: hidden; }
+        .ui-head { background: linear-gradient(90deg, #1a1a1a, #2a2a2a); color: #dcb; padding: 6px; text-align: center; font-weight: bold; border-bottom: 1px solid #444; margin: -8px -8px 8px -8px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; letter-spacing: 1px; }
         
-        button { background: #333; border: 1px solid #555; color: #ddd; padding: 4px 10px; cursor: pointer; font-size: 11px; transition: 0.1s; }
-        button:hover { background: #555; color: #fff; border-color: #888; }
+        button { background: #222; border: 1px solid #555; color: #bbb; padding: 5px 12px; cursor: pointer; font-size: 11px; transition: 0.2s; font-family: 'Segoe UI', sans-serif; }
+        button:hover { background: #444; color: #fff; border-color: #888; }
+        button:active { background: #111; }
         .btn-mini { padding: 2px 6px; font-size: 10px; }
-        .btn-close { background: #622; border-color: #844; }
+        .btn-close { background: #522; border-color: #744; }
+        .btn-close:hover { background: #722; }
 
         /* System Buttons */
         #sys-btns { position: absolute; top: 10px; right: 10px; display: flex; gap: 5px; z-index: 1000; }
 
         /* HUD */
         #hud { top: 10px; left: 10px; width: 260px; }
-        .bar-wrap { background: #111; height: 14px; border: 1px solid #333; margin-bottom: 3px; position: relative; }
+        .bar-wrap { background: #111; height: 12px; border: 1px solid #333; margin-bottom: 4px; position: relative; }
         .bar-fill { height: 100%; transition: width 0.1s linear; }
-        .bar-txt { position: absolute; top: 0; left: 0; width: 100%; text-align: center; font-size: 10px; line-height: 14px; color: #fff; text-shadow: 1px 1px 0 #000; }
+        .bar-txt { position: absolute; top: -1px; left: 0; width: 100%; text-align: center; font-size: 10px; line-height: 12px; color: #fff; text-shadow: 1px 1px 0 #000; }
         
         /* Skill Bar */
         #skill-bar { bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; }
-        .skill-slot { width: 50px; height: 50px; background: #222; border: 2px solid #555; position: relative; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; color: #777; }
-        .skill-cd { position: absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; color:#fff; font-size:16px; display:none; border: 1px solid #f00; }
-        .key-hint { position: absolute; top:2px; left:2px; font-size:10px; color:#aaa; }
+        .skill-slot { width: 50px; height: 50px; background: #151515; border: 2px solid #444; position: relative; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; color: #888; flex-direction: column; }
+        .skill-name { font-size: 10px; color: #aaa; margin-top: 2px; }
+        .skill-cd { position: absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; color:#f55; font-size:18px; font-weight:bold; display:none; border: 1px solid #800; }
+        .key-hint { position: absolute; top:2px; left:3px; font-size: 10px; color: #666; font-family: monospace; }
 
         /* Right Panel */
         #panel { top: 50px; right: 10px; width: 280px; max-height: 85vh; display: flex; flex-direction: column; }
         #panel-content { transition: opacity 0.2s; }
-        #inv-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; max-height: 200px; overflow-y: auto; background: #080808; padding: 3px; border: 1px inset #333; }
-        .slot { width: 40px; height: 40px; background: #1a1a1a; border: 1px solid #333; position: relative; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 9px; text-align: center; }
-        .slot:hover { border-color: #aaa; background: #2a2a2a; }
+        #inv-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; max-height: 250px; overflow-y: auto; background: #080808; padding: 3px; border: 1px inset #333; }
+        .slot { width: 40px; height: 40px; background: #151515; border: 1px solid #333; position: relative; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 9px; text-align: center; color: #777; }
+        .slot:hover { border-color: #aaa; background: #252525; color: #fff; }
 
         /* Rarity Effects */
         .r-0 { border-color: #555; color: #aaa; }
@@ -49,18 +52,18 @@
         .r-6 { border-color: #0ff; color: #0ff; box-shadow: 0 0 10px #0ff; animation: glow 1s infinite alternate; }
         
         /* Modals */
-        .modal { top: 50%; left: 50%; transform: translate(-50%, -50%); width: 400px; display: none; z-index: 100; }
+        .modal { top: 50%; left: 50%; transform: translate(-50%, -50%); width: 420px; display: none; z-index: 100; }
         
         /* Chat */
         #chat { bottom: 10px; left: 10px; width: 350px; height: 200px; background: rgba(0,0,0,0.5); pointer-events: none; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; }
-        .msg { font-size: 12px; text-shadow: 1px 1px 0 #000; padding: 1px; }
-        .c-sys { color: #aaa; } .c-get { color: #0f0; } .c-dmg { color: #f55; } .c-rare { color: #fa0; font-weight: bold; }
+        .msg { font-size: 12px; text-shadow: 1px 1px 0 #000; padding: 2px 4px; }
+        .c-sys { color: #888; } .c-get { color: #6f6; } .c-dmg { color: #f66; } .c-rare { color: #fa0; font-weight: bold; }
 
         /* Boss Bar */
         #boss-ui { position: absolute; top: 80px; left: 50%; transform: translateX(-50%); width: 600px; display: none; pointer-events: none; }
-        #boss-hp { width: 100%; height: 25px; background: #200; border: 2px solid #f00; position: relative; }
-        #boss-fill { width: 100%; height: 100%; background: linear-gradient(90deg, #f00, #900); transition: width 0.1s; }
-        #boss-name { text-align:center; color:#fff; font-weight:bold; text-shadow:2px 2px 0 #000; margin-bottom:5px; font-size: 16px; }
+        #boss-hp { width: 100%; height: 20px; background: #200; border: 1px solid #600; position: relative; }
+        #boss-fill { width: 100%; height: 100%; background: linear-gradient(90deg, #a00, #f22); transition: width 0.1s; }
+        #boss-name { text-align:center; color:#fff; font-weight:bold; text-shadow:2px 2px 0 #000; margin-bottom:3px; font-size: 14px; letter-spacing: 2px; }
 
         @keyframes pulse { 0% { border-color: #f00; } 50% { border-color: #800; } 100% { border-color: #f00; } }
         @keyframes glow { from { box-shadow: 0 0 5px #0ff; } to { box-shadow: 0 0 15px #0ff; } }
@@ -83,53 +86,54 @@
 
     <!-- HUD -->
     <div id="hud" class="ui-win">
-        <div class="ui-head"><span>정보</span></div>
-        <div style="font-size:12px; margin-bottom:5px; text-align:center;">
-            <span id="u-name">Player</span> (Lv.<span id="u-lv">1</span>) <span style="color:#aaa" id="u-job">전사</span>
+        <div class="ui-head"><span>STATUS</span></div>
+        <div style="font-size:12px; margin-bottom:8px; text-align:center;">
+            <span id="u-name" style="color:#fff; font-weight:bold;">Player</span> <span style="color:#aaa">Lv.</span><span id="u-lv" style="color:#fa0">1</span> <span style="color:#888" id="u-job">Warrior</span>
         </div>
-        <div class="bar-wrap"><div id="hp-bar" class="bar-fill" style="background:#c33; width:100%"></div><div class="bar-txt">HP</div></div>
-        <div class="bar-wrap"><div id="mp-bar" class="bar-fill" style="background:#33c; width:100%"></div><div class="bar-txt">MP</div></div>
-        <div class="bar-wrap"><div id="exp-bar" class="bar-fill" style="background:#ca0; width:0%"></div><div class="bar-txt">EXP</div></div>
-        <div style="font-size:11px; display:flex; justify-content:space-between; margin-top:4px;">
-            <span style="color:gold">GOLD: <span id="u-gold">0</span></span>
-            <span style="color:#aaa" id="u-zone">지역</span>
+        <div class="bar-wrap" style="border-color:#522"><div id="hp-bar" class="bar-fill" style="background:#b33; width:100%"></div><div class="bar-txt">HP</div></div>
+        <div class="bar-wrap" style="border-color:#225"><div id="mp-bar" class="bar-fill" style="background:#33b; width:100%"></div><div class="bar-txt">MP</div></div>
+        <div class="bar-wrap" style="border-color:#552"><div id="exp-bar" class="bar-fill" style="background:#bba; width:0%"></div><div class="bar-txt">EXP</div></div>
+        <div style="font-size:11px; display:flex; justify-content:space-between; margin-top:6px; color:#aaa;">
+            <span>GOLD: <span id="u-gold" style="color:#fd0">0</span></span>
+            <span id="u-zone">Unknown Area</span>
         </div>
     </div>
 
     <!-- Skill Bar -->
     <div id="skill-bar">
-        <div class="skill-slot" id="slot-q"><span class="key-hint">Q</span><span class="icon"></span><div class="skill-cd" id="cd-q"></div></div>
-        <div class="skill-slot" id="slot-w"><span class="key-hint">W</span><span class="icon"></span><div class="skill-cd" id="cd-w"></div></div>
-        <div class="skill-slot" id="slot-e"><span class="key-hint">E</span><span class="icon"></span><div class="skill-cd" id="cd-e"></div></div>
-        <div class="skill-slot" style="border-color:#a33"><span class="key-hint">P</span>🧪<span style="position:absolute; bottom:2px; right:2px; font-size:10px;" id="u-pot">0</span></div>
+        <div class="skill-slot" id="slot-q"><span class="key-hint">Q</span><span class="icon">Skill 1</span><div class="skill-cd" id="cd-q"></div></div>
+        <div class="skill-slot" id="slot-w"><span class="key-hint">W</span><span class="icon">Skill 2</span><div class="skill-cd" id="cd-w"></div></div>
+        <div class="skill-slot" id="slot-e"><span class="key-hint">E</span><span class="icon">Skill 3</span><div class="skill-cd" id="cd-e"></div></div>
+        <div class="skill-slot" style="border-color:#633"><span class="key-hint">P</span>POTION<span style="position:absolute; bottom:2px; right:4px; font-size:10px; color:#fff;" id="u-pot">0</span></div>
     </div>
 
     <!-- Right Panel -->
     <div id="panel" class="ui-win">
         <div class="ui-head">
-            <span>캐릭터 정보</span>
+            <span>CHARACTER</span>
             <button class="btn-mini" onclick="game.ui.togglePanel()">▼</button>
         </div>
         <div id="panel-content">
-            <div style="font-size:11px; margin-bottom:5px; margin-top:5px;">
-                공격력: <span id="st-atk">0</span> | 방어력: <span id="st-def">0</span><br>
-                스탯 포인트: <span id="st-pt" style="color:#f55">0</span>
+            <div style="font-size:11px; margin: 10px 0; color:#ccc;">
+                <div style="display:flex; justify-content:space-between;"><span>공격력</span> <span id="st-atk" style="color:#fff">0</span></div>
+                <div style="display:flex; justify-content:space-between;"><span>방어력</span> <span id="st-def" style="color:#fff">0</span></div>
+                <div style="margin-top:5px; text-align:right;">포인트: <span id="st-pt" style="color:#f55">0</span></div>
             </div>
-            <div style="display:flex; gap:2px; margin-bottom:5px;">
-                <button onclick="game.player.upStat('str')">힘</button>
-                <button onclick="game.player.upStat('dex')">민첩</button>
-                <button onclick="game.player.upStat('con')">체력</button>
+            <div style="display:flex; gap:4px; margin-bottom:10px;">
+                <button style="flex:1" onclick="game.player.upStat('str')">힘</button>
+                <button style="flex:1" onclick="game.player.upStat('dex')">민첩</button>
+                <button style="flex:1" onclick="game.player.upStat('con')">체력</button>
             </div>
-            <div style="border-top:1px solid #444; padding-top:5px;">
-                <div style="font-size:11px; color:#888;">장비</div>
+            <div style="border-top:1px solid #333; padding-top:10px; margin-bottom:10px;">
+                <div style="font-size:11px; color:#666; margin-bottom:4px;">EQUIPMENT</div>
                 <div style="display:flex; gap:5px;">
-                    <div id="eq-w" class="slot">무기</div>
-                    <div id="eq-a" class="slot">갑옷</div>
+                    <div id="eq-w" class="slot">WPN</div>
+                    <div id="eq-a" class="slot">AMR</div>
                 </div>
             </div>
-            <div class="ui-head" style="margin-top:10px; font-size:11px;">인벤토리 (<span id="inv-cnt">0</span>)</div>
+            <div class="ui-head" style="font-size:11px; margin-bottom:5px;">INVENTORY (<span id="inv-cnt">0</span>)</div>
             <div id="inv-grid"></div>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:2px; margin-top:5px;">
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px; margin-top:10px;">
                 <button onclick="game.ui.toggleShop()">상점</button>
                 <button onclick="game.ui.toggleSmith()">대장간</button>
             </div>
@@ -138,38 +142,38 @@
 
     <!-- Modals -->
     <div id="shop-modal" class="ui-win modal">
-        <div class="ui-head">상점 <button class="btn-close" onclick="game.ui.closeModals()">X</button></div>
-        <div id="shop-list" style="max-height:300px; overflow-y:auto;"></div>
+        <div class="ui-head">SHOP <button class="btn-close btn-mini" onclick="game.ui.closeModals()">X</button></div>
+        <div id="shop-list" style="max-height:300px; overflow-y:auto; padding:5px;"></div>
     </div>
     
     <div id="smith-modal" class="ui-win modal">
-        <div class="ui-head">대장간 <button class="btn-close" onclick="game.ui.closeModals()">X</button></div>
-        <div style="padding:10px; text-align:center;">
-            <div style="border-bottom:1px solid #444; padding-bottom:10px; margin-bottom:10px;">
-                <h4 style="margin:0 0 5px 0; color:#fa0;">[ 장비 강화 ]</h4>
-                <div id="smith-slot" class="slot" style="margin:0 auto 5px auto; width:50px; height:50px;" onclick="game.smith.clear('up')">선택</div>
-                <button style="width:80%; padding:5px;" onclick="game.smith.upgrade()">강화 시도 (1000G)</button>
+        <div class="ui-head">BLACKSMITH <button class="btn-close btn-mini" onclick="game.ui.closeModals()">X</button></div>
+        <div style="padding:15px; text-align:center;">
+            <div style="border-bottom:1px solid #333; padding-bottom:15px; margin-bottom:15px;">
+                <div style="color:#fa0; font-size:12px; margin-bottom:5px;">장비 강화</div>
+                <div id="smith-slot" class="slot" style="margin:0 auto 10px auto; width:50px; height:50px;" onclick="game.smith.clear('up')">선택</div>
+                <button style="width:100%; padding:8px;" onclick="game.smith.upgrade()">강화 시도 (1000G)</button>
             </div>
             <div>
-                <h4 style="margin:0 0 5px 0; color:#0ff;">[ 각인 부여 ]</h4>
-                <div style="display:flex; justify-content:center; gap:10px; margin-bottom:5px;">
+                <div style="color:#0ff; font-size:12px; margin-bottom:5px;">특성 각인</div>
+                <div style="display:flex; justify-content:center; gap:15px; margin-bottom:10px;">
                     <div id="smith-en-item" class="slot" style="width:50px; height:50px;" onclick="game.smith.clear('enItem')">장비</div>
                     <div id="smith-en-stone" class="slot" style="width:50px; height:50px; border-radius:50%; border-color:#a0a;" onclick="game.smith.clear('enStone')">각인석</div>
                 </div>
-                <button style="width:80%; padding:5px;" onclick="game.smith.engrave()">각인 하기 (500G)</button>
+                <button style="width:100%; padding:8px;" onclick="game.smith.engrave()">각인 부여 (500G)</button>
             </div>
         </div>
     </div>
 
     <!-- Job Select -->
-    <div id="job-select" class="ui-win modal" style="display:block; text-align:center;">
-        <div class="ui-head">직업 선택</div>
+    <div id="job-select" class="ui-win modal" style="display:block; text-align:center; top:40%;">
+        <div class="ui-head">CLASS SELECTION</div>
         <div style="padding:15px; display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-            <button style="padding:15px;" onclick="game.setJob(0)"><b>전사</b><br><span style="font-size:10px; color:#aaa">근접/이속 3.0</span></button>
-            <button style="padding:15px;" onclick="game.setJob(1)"><b>궁수</b><br><span style="font-size:10px; color:#aaa">원거리/이속 2.2</span></button>
-            <button style="padding:15px;" onclick="game.setJob(2)"><b>마법사</b><br><span style="font-size:10px; color:#aaa">광역/이속 2.2</span></button>
-            <button style="padding:15px;" onclick="game.setJob(3)"><b>암살자</b><br><span style="font-size:10px; color:#aaa">치명/이속 4.2</span></button>
-            <button style="padding:15px; grid-column: span 2;" onclick="game.setJob(4)"><b>성기사</b><br><span style="font-size:10px; color:#aaa">방어/이속 3.0</span></button>
+            <button style="padding:15px;" onclick="game.setJob(0)"><b style="color:#faa">전사</b><br><span style="font-size:10px; color:#666">근접/밸런스</span></button>
+            <button style="padding:15px;" onclick="game.setJob(1)"><b style="color:#afa">궁수</b><br><span style="font-size:10px; color:#666">원거리/속도</span></button>
+            <button style="padding:15px;" onclick="game.setJob(2)"><b style="color:#aaf">마법사</b><br><span style="font-size:10px; color:#666">광역/폭딜</span></button>
+            <button style="padding:15px;" onclick="game.setJob(3)"><b style="color:#d8f">암살자</b><br><span style="font-size:10px; color:#666">치명/이속</span></button>
+            <button style="padding:15px; grid-column: span 2;" onclick="game.setJob(4)"><b style="color:#fd8">성기사</b><br><span style="font-size:10px; color:#666">방어/회복</span></button>
         </div>
     </div>
 
@@ -184,50 +188,55 @@ const CANVAS = document.getElementById('gameCanvas');
 const CTX = CANVAS.getContext('2d');
 let SCREEN_W = window.innerWidth;
 let SCREEN_H = window.innerHeight;
-const WORLD_W = 8000;
-const WORLD_H = 8000;
+const WORLD_W = 12000;
+const WORLD_H = 12000;
 
-// Zones
+// Zones (V11 Expanded)
 const ZONES = [
     { name: "평화의 숲", color: "#1a2b1a", x: 0, y: 0, w: 4000, h: 4000, lv: 1 },
     { name: "황무지", color: "#3d3018", x: 4000, y: 0, w: 4000, h: 4000, lv: 2 },
-    { name: "설원", color: "#15202b", x: 0, y: 4000, w: 3000, h: 4000, lv: 3 },
-    { name: "지옥", color: "#220505", x: 3000, y: 4000, w: 3000, h: 4000, lv: 4 },
-    { name: "맹독의 늪", color: "#1a2205", x: 6000, y: 4000, w: 2000, h: 2000, lv: 5 },
-    { name: "천공의 섬", color: "#445566", x: 6000, y: 6000, w: 2000, h: 2000, lv: 6 }
+    { name: "설원", color: "#15202b", x: 0, y: 4000, w: 4000, h: 4000, lv: 3 },
+    { name: "지옥", color: "#220505", x: 4000, y: 4000, w: 4000, h: 4000, lv: 4 },
+    { name: "맹독의 늪", color: "#1a2205", x: 8000, y: 0, w: 4000, h: 4000, lv: 5 },
+    { name: "천공의 섬", color: "#445566", x: 8000, y: 4000, w: 4000, h: 4000, lv: 6 },
+    { name: "저주받은 묘지", color: "#111115", x: 0, y: 8000, w: 6000, h: 4000, lv: 7 },
+    { name: "수정 동굴", color: "#201030", x: 6000, y: 8000, w: 6000, h: 4000, lv: 8 }
 ];
 
 const TOWNS = [
     { name: "메인 마을", x: 2000, y: 2000, r: 400 },
-    { name: "사막 전초기지", x: 6000, y: 2000, r: 300 },
-    { name: "얼음 요새", x: 1500, y: 6000, r: 300 },
-    { name: "최후의 보루", x: 4500, y: 6000, r: 300 },
-    { name: "늪지 오두막", x: 7000, y: 5000, r: 200 },
-    { name: "천공 신전", x: 7000, y: 7000, r: 200 }
+    { name: "사막 캠프", x: 6000, y: 2000, r: 300 },
+    { name: "설원 요새", x: 2000, y: 6000, r: 300 },
+    { name: "지옥 전초기지", x: 6000, y: 6000, r: 300 },
+    { name: "늪지 오두막", x: 10000, y: 2000, r: 300 },
+    { name: "천공 신전", x: 10000, y: 6000, r: 300 },
+    { name: "묘지기 초소", x: 3000, y: 10000, r: 300 },
+    { name: "수정 광산", x: 9000, y: 10000, r: 300 }
 ];
 
+// V11 Balance: Lower drop rate, higher stats
 const RARITY = [
-    { n: '일반', c: '#aaa', cl: 'r-0', m: 1 },
-    { n: '고급', c: '#4f4', cl: 'r-1', m: 1.3 },
-    { n: '희귀', c: '#4af', cl: 'r-2', m: 1.8 },
-    { n: '영웅', c: '#d4f', cl: 'r-3', m: 2.5 },
-    { n: '전설', c: '#fa0', cl: 'r-4', m: 4.0 },
-    { n: '신화', c: '#f22', cl: 'r-5', m: 7.0 },
-    { n: '태고', c: '#0ff', cl: 'r-6', m: 12.0 }
+    { n: '일반', c: '#888', cl: 'r-0', m: 1.0 },
+    { n: '고급', c: '#4f4', cl: 'r-1', m: 1.5 },
+    { n: '희귀', c: '#4af', cl: 'r-2', m: 2.5 },
+    { n: '영웅', c: '#d4f', cl: 'r-3', m: 4.0 },
+    { n: '전설', c: '#fa0', cl: 'r-4', m: 8.0 },  // Buffed from 4.0
+    { n: '신화', c: '#f22', cl: 'r-5', m: 15.0 }, // Buffed from 7.0
+    { n: '태고', c: '#0ff', cl: 'r-6', m: 30.0 }  // Buffed from 12.0
 ];
 
 const ENGRAVES = [
     { id: 'vamp', n: '흡혈' }, { id: 'crit', n: '치명' }, { id: 'exe', n: '처형' },
-    { id: 'blast', n: '폭발' }, { id: 'stun', n: '기절' }, { id: 'spd', n: '신속' }
+    { id: 'blast', n: '폭발' }, { id: 'stun', n: '기절' }, { id: 'spd', n: '신속' },
+    { id: 'greed', n: '탐욕' }, { id: 'dodge', n: '회피' }, { id: 'leech', n: '마나흡수' }
 ];
 
-// V10: Speed Balancing
 const JOBS = [
-    { n: '전사', hp: 1.2, mp: 0.8, range: 60, spd: 3.0, icons: ['⚔️','🌪️','⚡'] },
-    { n: '궁수', hp: 0.8, mp: 1.0, range: 250, spd: 2.2, icons: ['🏹','🌧️','💨'] },
-    { n: '마법사', hp: 0.7, mp: 1.5, range: 200, spd: 2.2, icons: ['🔥','❄️','✨'] },
-    { n: '암살자', hp: 0.9, mp: 1.0, range: 60, spd: 4.2, icons: ['🗡️','☠️','👻'] },
-    { n: '성기사', hp: 1.4, mp: 1.2, range: 60, spd: 3.0, icons: ['🔨','🛡️','✝️'] }
+    { n: '전사', hp: 1.2, mp: 0.8, range: 60, spd: 3.0, skills: ['강타','휠윈드','함성'] },
+    { n: '궁수', hp: 0.8, mp: 1.0, range: 250, spd: 2.2, skills: ['더블샷','화살비','후퇴'] },
+    { n: '마법사', hp: 0.7, mp: 1.5, range: 200, spd: 2.2, skills: ['화염구','눈보라','이동'] },
+    { n: '암살자', hp: 0.9, mp: 1.0, range: 60, spd: 4.2, skills: ['기습','맹독','질주'] },
+    { n: '성기사', hp: 1.4, mp: 1.2, range: 60, spd: 3.0, skills: ['심판','방패','축복'] }
 ];
 
 /**
@@ -261,10 +270,15 @@ class Item {
         this.type = type || (Math.random()<0.5 ? 'w' : 'a');
         if(type === 's') { this.name = "각인석"; this.rarity = 2; this.price = 200; return; }
         
+        // V11: Lower drop rates for high tiers
         const r = Math.random();
         let ri = 0;
-        if(r < 0.0002) ri = 6; else if(r < 0.001) ri = 5; else if(r < 0.005) ri = 4;
-        else if(r < 0.03) ri = 3; else if(r < 0.15) ri = 2; else if(r < 0.4) ri = 1;
+        if(r < 0.0001) ri = 6;      // 0.01%
+        else if(r < 0.0005) ri = 5; // 0.05%
+        else if(r < 0.002) ri = 4;  // 0.2%
+        else if(r < 0.02) ri = 3;   // 2%
+        else if(r < 0.1) ri = 2;    // 10%
+        else if(r < 0.4) ri = 1;    // 40%
 
         const info = RARITY[ri];
         this.rarity = ri;
@@ -274,9 +288,10 @@ class Item {
         this.name = `${info.n} ${this.type==='w'?'검':'갑옷'}`;
         this.price = Math.floor(this.power * 5);
 
+        // V11: More Effects
         if(ri >= 4) {
-            const effects = ['번개', '화염', '빙결'];
-            this.effect = effects[rand(0,2)];
+            const effects = ['번개', '화염', '빙결', '메테오', '체인'];
+            this.effect = effects[rand(0,4)];
             this.name = `${this.effect}의 ${this.name}`;
         }
     }
@@ -339,20 +354,33 @@ class Player extends Entity {
         }
         for(let k in this.skills) if(this.skills[k]>0) this.skills[k]--;
 
-        if(this.target && !this.target.dead) {
-            const range = JOBS[this.job].range;
-            const dist = getDist(this, this.target);
-            
-            if(this.dest) {
-                this.moveTo(this.dest.x, this.dest.y);
-                if(getDist(this, this.dest) < 5) this.dest = null;
-            } else if(dist > range) {
-                this.moveTo(this.target.x, this.target.y);
-            }
+        // V11: Improved Targeting Logic (Sticky Target)
+        if(this.target) {
+            if(this.target.dead) {
+                this.target = null;
+            } else {
+                const range = JOBS[this.job].range;
+                const dist = getDist(this, this.target);
+                
+                // If manual move destination exists, prioritize it (kiting)
+                if(this.dest) {
+                    this.moveTo(this.dest.x, this.dest.y);
+                    if(getDist(this, this.dest) < 5) this.dest = null;
+                } 
+                // Auto-chase if no manual move
+                else if(dist > range) {
+                    this.moveTo(this.target.x, this.target.y);
+                }
 
-            if(dist <= range) {
-                if(Date.now() - this.lastAtk > Math.max(200, 1000 - this.stats.dex*10)) {
-                    this.attack(this.target);
+                // Attack if in range
+                if(dist <= range) {
+                    // Stop moving to attack
+                    if(!this.dest) {
+                        // Face target
+                    }
+                    if(Date.now() - this.lastAtk > Math.max(200, 1000 - this.stats.dex*10)) {
+                        this.attack(this.target);
+                    }
                 }
             }
         } else if(this.dest) {
@@ -387,6 +415,8 @@ class Player extends Entity {
                 this.hp = Math.min(this.maxHp, this.hp + heal);
                 spawnFloat(`+${heal}`, this.x, this.y-30, '#0f0');
             }
+            if(engrave.id === 'greed') game.player.gold += rand(1,5);
+            if(engrave.id === 'leech') this.mp = Math.min(this.maxMp, this.mp + 2);
         }
 
         if(this.job === 3 && Math.random() < 0.4) { dmg *= 2.0; isCrit = true; } 
@@ -395,32 +425,49 @@ class Player extends Entity {
         t.takeDamage(dmg);
 
         const ang = Math.atan2(t.y - this.y, t.x - this.x);
-        if(!isSkill) {
-            // V10: Pretty Slash
-            game.particles.push({
-                type: 'slash', x: t.x, y: t.y, ang: ang, life: 12,
-                col: this.eq.w && this.eq.w.rarity >= 4 ? '#0ff' : '#fff'
-            });
-        }
         
-        if(this.job !== 0 && this.job !== 3 && this.job !== 4 && !isSkill) {
-             game.particles.push({
-                type: 'proj', x: this.x, y: this.y, tx: t.x, ty: t.y, life: 20,
-                col: this.job===1 ? '#ff0' : '#0af'
-            });
+        // V11: Slash only for Melee
+        if(!isSkill) {
+            if(this.job === 0 || this.job === 3 || this.job === 4) {
+                // Melee Slash - Positioned between player and target
+                const sx = this.x + Math.cos(ang) * 30;
+                const sy = this.y + Math.sin(ang) * 30;
+                game.particles.push({
+                    type: 'slash', x: sx, y: sy, ang: ang, life: 12,
+                    col: this.eq.w && this.eq.w.rarity >= 4 ? '#0ff' : '#fff'
+                });
+            } else {
+                // Ranged Projectile
+                game.particles.push({
+                    type: 'proj', x: this.x, y: this.y, tx: t.x, ty: t.y, life: 20,
+                    col: this.job===1 ? '#ff0' : '#0af'
+                });
+            }
         }
 
         spawnFloat(dmg, t.x, t.y-20, isCrit?'#ff0':'#fff');
         
+        // V11: New Item Effects
         if(this.eq.w && this.eq.w.effect) {
-            if(Math.random() < 0.3) {
-                if(this.eq.w.effect === '번개') {
-                    spawnFloat("⚡", t.x, t.y-40, '#ff0');
-                    t.takeDamage(dmg * 0.5);
-                } else if(this.eq.w.effect === '화염') {
-                    t.addEffect('burn', 180, this.level);
-                } else if(this.eq.w.effect === '빙결') {
-                    t.addEffect('freeze', 60, 0);
+            if(Math.random() < 0.25) {
+                const eff = this.eq.w.effect;
+                if(eff === '번개') { spawnFloat("⚡", t.x, t.y-40, '#ff0'); t.takeDamage(dmg * 0.5); }
+                else if(eff === '화염') t.addEffect('burn', 180, this.level);
+                else if(eff === '빙결') t.addEffect('freeze', 60, 0);
+                else if(eff === '메테오') {
+                    game.particles.push({type:'aoe_warn', x:t.x, y:t.y, size:80, life:30});
+                    setTimeout(()=>{
+                        game.particles.push({type:'explosion', x:t.x, y:t.y, size:80, life:30, col:'#f50'});
+                        t.takeDamage(dmg * 2.0);
+                    }, 500);
+                }
+                else if(eff === '체인') {
+                    game.monsters.forEach(m => {
+                        if(m !== t && getDist(t, m) < 200) {
+                            m.takeDamage(dmg * 0.5);
+                            game.particles.push({type:'chain', x:t.x, y:t.y, tx:m.x, ty:m.y, life:10, col:'#ff0'});
+                        }
+                    });
                 }
             }
         }
@@ -464,6 +511,12 @@ class Player extends Entity {
 
     takeDamage(d, ignoreDef=false) {
         if(this.effects.some(e=>e.type==='shield')) d *= 0.5;
+        // Engrave Dodge
+        if(this.eq.w && this.eq.w.engrave && this.eq.w.engrave.id === 'dodge' && Math.random() < 0.2) {
+            spawnFloat("MISS", this.x, this.y-30, '#888');
+            return;
+        }
+
         const def = ignoreDef ? 0 : (this.stats.con*0.5 + (this.eq.a ? this.eq.a.power + this.eq.a.up*5 : 0));
         const minDmg = d * 0.2; 
         const real = Math.max(minDmg, d - def);
@@ -493,7 +546,7 @@ class Monster extends Entity {
         if(type===1) scale *= 2;
         if(type===2) scale *= 5;
 
-        const cols = ['#4f4', '#da4', '#adf', '#f55', '#4d4', '#88f'];
+        const cols = ['#4f4', '#da4', '#adf', '#f55', '#4d4', '#88f', '#666', '#a4a'];
         let col = cols[zone.lv-1];
         if(type===1) col = '#fb0';
         if(type===2) col = '#f00';
@@ -669,7 +722,7 @@ class Game {
         });
         CANVAS.width = SCREEN_W; CANVAS.height = SCREEN_H;
 
-        if(localStorage.getItem('rpg_v10') || localStorage.getItem('rpg_v8')) {
+        if(localStorage.getItem('rpg_v11') || localStorage.getItem('rpg_v10')) {
             this.load();
             document.getElementById('job-select').style.display = 'none';
         }
@@ -696,7 +749,7 @@ class Game {
         this.frame++;
         
         this.monsters = this.monsters.filter(m => !m.dead);
-        if(this.monsters.length < 90) { 
+        if(this.monsters.length < 100) { 
             const z = ZONES[rand(0, ZONES.length-1)];
             const mx = rand(z.x, z.x+z.w);
             const my = rand(z.y, z.y+z.h);
@@ -725,7 +778,7 @@ class Game {
         this.cam.y = clamp(this.player.y - SCREEN_H/2, 0, WORLD_H - SCREEN_H);
 
         const ctx = CTX;
-        ctx.fillStyle = '#111'; ctx.fillRect(0,0,SCREEN_W,SCREEN_H);
+        ctx.fillStyle = '#050505'; ctx.fillRect(0,0,SCREEN_W,SCREEN_H);
 
         ZONES.forEach(z => {
             if(z.x+z.w > this.cam.x && z.x < this.cam.x+SCREEN_W && z.y+z.h > this.cam.y && z.y < this.cam.y+SCREEN_H) {
@@ -737,7 +790,7 @@ class Game {
              if(t.x+t.r > this.cam.x && t.x-t.r < this.cam.x+SCREEN_W) {
                  ctx.fillStyle = 'rgba(0,0,0,0.5)';
                  ctx.beginPath(); ctx.arc(t.x-this.cam.x, t.y-this.cam.y, t.r, 0, Math.PI*2); ctx.fill();
-                 ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = "16px serif";
+                 ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = "14px serif";
                  ctx.fillText(t.name, t.x-this.cam.x, t.y-this.cam.y);
              }
         });
@@ -761,7 +814,6 @@ class Game {
             ctx.restore();
         }
 
-        // V10: Pretty Particles
         this.particles = this.particles.filter(p => p.life > 0);
         this.particles.forEach(p => {
             p.update && p.update();
@@ -772,8 +824,10 @@ class Game {
                 ctx.rotate(p.ang);
                 ctx.globalCompositeOperation = 'lighter';
                 ctx.fillStyle = p.col;
+                // V11: Better Crescent Shape
                 ctx.beginPath();
-                ctx.arc(0, 0, 60, -0.5, 0.5);
+                ctx.arc(0, 0, 50, -0.8, 0.8);
+                ctx.arc(10, 0, 40, 0.8, -0.8, true);
                 ctx.fill();
                 ctx.restore(); 
                 p.life--;
@@ -783,7 +837,6 @@ class Game {
                 ctx.save();
                 ctx.globalCompositeOperation = 'lighter';
                 ctx.fillStyle = p.col; ctx.beginPath(); ctx.arc(p.x-this.cam.x, p.y-this.cam.y, p.size||6, 0, Math.PI*2); ctx.fill();
-                // Trail
                 ctx.globalAlpha = 0.5;
                 ctx.beginPath(); ctx.arc(p.x-this.cam.x - (p.tx-p.x)*0.1, p.y-this.cam.y - (p.ty-p.y)*0.1, p.size||4, 0, Math.PI*2); ctx.fill();
                 ctx.restore();
@@ -803,6 +856,17 @@ class Game {
                  ctx.beginPath(); ctx.arc(p.x-this.cam.x, p.y-this.cam.y, p.size, 0, Math.PI*2); ctx.stroke();
                  ctx.fillStyle = 'rgba(255,0,0,0.2)'; ctx.fill(); ctx.globalAlpha = 1.0;
                  p.life--;
+            }
+            else if(p.type === 'chain') {
+                ctx.save(); ctx.globalCompositeOperation = 'lighter';
+                ctx.strokeStyle = p.col; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.moveTo(p.x-this.cam.x, p.y-this.cam.y);
+                // Zigzag lightning
+                const midX = (p.x + p.tx)/2 + rand(-20,20);
+                const midY = (p.y + p.ty)/2 + rand(-20,20);
+                ctx.lineTo(midX-this.cam.x, midY-this.cam.y);
+                ctx.lineTo(p.tx-this.cam.x, p.ty-this.cam.y);
+                ctx.stroke(); ctx.restore(); p.life--;
             }
             else if(p.type === 'shock' || p.type === 'spin' || p.type === 'aura') {
                 ctx.save();
@@ -826,45 +890,38 @@ class Game {
         requestAnimationFrame(this.loop);
     }
 
-    // V10: Robust Save Logic
     save(manual = false) {
         const p = this.player;
-        // Save only data, not the object itself to avoid circular refs
         const saveData = {
             level: p.level, exp: p.exp, maxExp: p.maxExp,
             gold: p.gold, hp: p.hp, maxHp: p.maxHp, mp: p.mp, maxMp: p.maxMp,
             stats: p.stats, job: p.job, potions: p.potions,
             inv: p.inv, eq: p.eq, x: p.x, y: p.y
         };
-        localStorage.setItem('rpg_v10', JSON.stringify(saveData));
+        localStorage.setItem('rpg_v11', JSON.stringify(saveData));
         if(manual) alert("저장되었습니다.");
     }
 
     reset() {
         if(confirm("정말 초기화하시겠습니까?")) {
-            localStorage.removeItem('rpg_v10');
+            localStorage.removeItem('rpg_v11');
             location.reload();
         }
     }
 
     load() {
         try {
-            // V10: Try V10 first, then fallbacks
-            let json = localStorage.getItem('rpg_v10') || localStorage.getItem('rpg_v8') || localStorage.getItem('rpg_v7');
+            let json = localStorage.getItem('rpg_v11') || localStorage.getItem('rpg_v10');
             if(json) {
                 const d = JSON.parse(json);
                 const p = this.player;
                 
-                // Restore simple props
                 p.level = d.level; p.exp = d.exp; p.maxExp = d.maxExp;
                 p.gold = d.gold; p.hp = d.hp; p.maxHp = d.maxHp; p.mp = d.mp; p.maxMp = d.maxMp;
                 p.stats = d.stats; p.job = d.job; p.potions = d.potions;
                 p.x = d.x; p.y = d.y;
-                
-                // Restore speed based on job
                 p.spd = JOBS[p.job].spd;
 
-                // Re-instantiate Items
                 const restoreItem = (i) => {
                     const n = new Item(1);
                     Object.assign(n, i);
@@ -907,9 +964,9 @@ class UI {
 
     updateIcons() {
         const j = JOBS[this.g.player.job];
-        document.querySelector('#slot-q .icon').innerText = j.icons[0];
-        document.querySelector('#slot-w .icon').innerText = j.icons[1];
-        document.querySelector('#slot-e .icon').innerText = j.icons[2];
+        document.querySelector('#slot-q .key-hint').innerText = "Q " + j.skills[0];
+        document.querySelector('#slot-w .key-hint').innerText = "W " + j.skills[1];
+        document.querySelector('#slot-e .key-hint').innerText = "E " + j.skills[2];
     }
 
     updatePanel() {
@@ -923,7 +980,7 @@ class UI {
 
         const setEq = (id, it, type) => {
             const el = document.getElementById(id);
-            el.innerHTML = it ? `<span style="color:${RARITY[it.rarity].c}">${it.name}</span>` : (type==='w'?'무기':'갑옷');
+            el.innerHTML = it ? `<span style="color:${RARITY[it.rarity].c}">${it.name}</span>` : (type==='w'?'WPN':'AMR');
             el.className = it ? `slot ${RARITY[it.rarity].cl}` : 'slot';
             el.onclick = () => { if(it) { p.inv.push(it); if(type==='w') p.eq.w=null; else p.eq.a=null; this.updatePanel(); } };
         };
@@ -934,8 +991,8 @@ class UI {
         p.inv.forEach((it, i) => {
             const d = document.createElement('div');
             d.className = `slot ${RARITY[it.rarity].cl}`;
-            d.innerHTML = it.type==='s' ? '각인석' : it.name;
-            if(it.up > 0) d.innerHTML += ` (+${it.up})`;
+            d.innerHTML = it.type==='s' ? 'GEM' : (it.type==='w'?'W':'A');
+            if(it.up > 0) d.innerHTML += `+${it.up}`;
             if(it.engrave) d.innerHTML += ` <span style='color:#0ff'>★</span>`;
             
             d.onclick = () => {
@@ -1001,13 +1058,13 @@ class Smith {
     
     sel(it, i) {
         this.item = it; this.iIdx = i;
-        const el1 = document.getElementById('smith-slot'); el1.className = `slot ${RARITY[it.rarity].cl}`; el1.innerHTML = it.name;
-        const el2 = document.getElementById('smith-en-item'); el2.className = `slot ${RARITY[it.rarity].cl}`; el2.innerHTML = it.name;
+        const el1 = document.getElementById('smith-slot'); el1.className = `slot ${RARITY[it.rarity].cl}`; el1.innerHTML = "SEL";
+        const el2 = document.getElementById('smith-en-item'); el2.className = `slot ${RARITY[it.rarity].cl}`; el2.innerHTML = "SEL";
     }
     
     selStone(it, i) {
         this.stone = it; this.sIdx = i;
-        const el = document.getElementById('smith-en-stone'); el.className = `slot ${RARITY[it.rarity].cl}`; el.innerHTML = "각인석";
+        const el = document.getElementById('smith-en-stone'); el.className = `slot ${RARITY[it.rarity].cl}`; el.innerHTML = "GEM";
     }
 
     clear(t) {
