@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>RPG V9: Grand Expansion</title>
+    <title>RPG V10: Visuals & Stability</title>
     <style>
         /* CSS Styles */
         body { margin: 0; overflow: hidden; background: #050505; color: #ccc; font-family: 'Segoe UI', sans-serif; user-select: none; }
@@ -17,6 +17,9 @@
         .btn-mini { padding: 2px 6px; font-size: 10px; }
         .btn-close { background: #622; border-color: #844; }
 
+        /* System Buttons */
+        #sys-btns { position: absolute; top: 10px; right: 10px; display: flex; gap: 5px; z-index: 1000; }
+
         /* HUD */
         #hud { top: 10px; left: 10px; width: 260px; }
         .bar-wrap { background: #111; height: 14px; border: 1px solid #333; margin-bottom: 3px; position: relative; }
@@ -30,7 +33,7 @@
         .key-hint { position: absolute; top:2px; left:2px; font-size:10px; color:#aaa; }
 
         /* Right Panel */
-        #panel { top: 10px; right: 10px; width: 280px; max-height: 90vh; display: flex; flex-direction: column; }
+        #panel { top: 50px; right: 10px; width: 280px; max-height: 85vh; display: flex; flex-direction: column; }
         #panel-content { transition: opacity 0.2s; }
         #inv-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; max-height: 200px; overflow-y: auto; background: #080808; padding: 3px; border: 1px inset #333; }
         .slot { width: 40px; height: 40px; background: #1a1a1a; border: 1px solid #333; position: relative; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 9px; text-align: center; }
@@ -67,6 +70,12 @@
 
 <div id="game-container">
     <canvas id="gameCanvas"></canvas>
+    
+    <div id="sys-btns">
+        <button onclick="game.save(true)">저장</button>
+        <button onclick="game.reset()">초기화</button>
+    </div>
+
     <div id="boss-ui">
         <div id="boss-name">BOSS NAME</div>
         <div id="boss-hp"><div id="boss-fill"></div></div>
@@ -156,11 +165,11 @@
     <div id="job-select" class="ui-win modal" style="display:block; text-align:center;">
         <div class="ui-head">직업 선택</div>
         <div style="padding:15px; display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-            <button style="padding:15px;" onclick="game.setJob(0)"><b>전사</b><br><span style="font-size:10px; color:#aaa">근접/밸런스</span></button>
-            <button style="padding:15px;" onclick="game.setJob(1)"><b>궁수</b><br><span style="font-size:10px; color:#aaa">원거리/속도</span></button>
-            <button style="padding:15px;" onclick="game.setJob(2)"><b>마법사</b><br><span style="font-size:10px; color:#aaa">광역/폭딜</span></button>
-            <button style="padding:15px;" onclick="game.setJob(3)"><b>암살자</b><br><span style="font-size:10px; color:#aaa">치명/독</span></button>
-            <button style="padding:15px; grid-column: span 2;" onclick="game.setJob(4)"><b>성기사</b><br><span style="font-size:10px; color:#aaa">방어/회복</span></button>
+            <button style="padding:15px;" onclick="game.setJob(0)"><b>전사</b><br><span style="font-size:10px; color:#aaa">근접/이속 3.0</span></button>
+            <button style="padding:15px;" onclick="game.setJob(1)"><b>궁수</b><br><span style="font-size:10px; color:#aaa">원거리/이속 2.2</span></button>
+            <button style="padding:15px;" onclick="game.setJob(2)"><b>마법사</b><br><span style="font-size:10px; color:#aaa">광역/이속 2.2</span></button>
+            <button style="padding:15px;" onclick="game.setJob(3)"><b>암살자</b><br><span style="font-size:10px; color:#aaa">치명/이속 4.2</span></button>
+            <button style="padding:15px; grid-column: span 2;" onclick="game.setJob(4)"><b>성기사</b><br><span style="font-size:10px; color:#aaa">방어/이속 3.0</span></button>
         </div>
     </div>
 
@@ -175,10 +184,10 @@ const CANVAS = document.getElementById('gameCanvas');
 const CTX = CANVAS.getContext('2d');
 let SCREEN_W = window.innerWidth;
 let SCREEN_H = window.innerHeight;
-const WORLD_W = 8000; // Expanded Map
+const WORLD_W = 8000;
 const WORLD_H = 8000;
 
-// Zones (Expanded)
+// Zones
 const ZONES = [
     { name: "평화의 숲", color: "#1a2b1a", x: 0, y: 0, w: 4000, h: 4000, lv: 1 },
     { name: "황무지", color: "#3d3018", x: 4000, y: 0, w: 4000, h: 4000, lv: 2 },
@@ -208,20 +217,17 @@ const RARITY = [
 ];
 
 const ENGRAVES = [
-    { id: 'vamp', n: '흡혈', desc: '체력 흡수' },
-    { id: 'crit', n: '치명', desc: '치명타 확률' },
-    { id: 'exe', n: '처형', desc: '낮은 체력 추뎀' },
-    { id: 'blast', n: '폭발', desc: '광역 피해' },
-    { id: 'stun', n: '기절', desc: '적 기절' },
-    { id: 'spd', n: '신속', desc: '공속 증가' }
+    { id: 'vamp', n: '흡혈' }, { id: 'crit', n: '치명' }, { id: 'exe', n: '처형' },
+    { id: 'blast', n: '폭발' }, { id: 'stun', n: '기절' }, { id: 'spd', n: '신속' }
 ];
 
+// V10: Speed Balancing
 const JOBS = [
-    { n: '전사', hp: 1.2, mp: 0.8, range: 60, icons: ['⚔️','🌪️','⚡'] },
-    { n: '궁수', hp: 0.8, mp: 1.0, range: 250, icons: ['🏹','🌧️','💨'] },
-    { n: '마법사', hp: 0.7, mp: 1.5, range: 200, icons: ['🔥','❄️','✨'] },
-    { n: '암살자', hp: 0.9, mp: 1.0, range: 60, icons: ['🗡️','☠️','👻'] },
-    { n: '성기사', hp: 1.4, mp: 1.2, range: 60, icons: ['🔨','🛡️','✝️'] }
+    { n: '전사', hp: 1.2, mp: 0.8, range: 60, spd: 3.0, icons: ['⚔️','🌪️','⚡'] },
+    { n: '궁수', hp: 0.8, mp: 1.0, range: 250, spd: 2.2, icons: ['🏹','🌧️','💨'] },
+    { n: '마법사', hp: 0.7, mp: 1.5, range: 200, spd: 2.2, icons: ['🔥','❄️','✨'] },
+    { n: '암살자', hp: 0.9, mp: 1.0, range: 60, spd: 4.2, icons: ['🗡️','☠️','👻'] },
+    { n: '성기사', hp: 1.4, mp: 1.2, range: 60, spd: 3.0, icons: ['🔨','🛡️','✝️'] }
 ];
 
 /**
@@ -280,20 +286,17 @@ class Entity {
     constructor(x, y, sz, col) {
         this.x = x; this.y = y; this.size = sz; this.col = col;
         this.hp = 100; this.maxHp = 100; this.dead = false;
-        this.effects = []; // {type, time, val}
+        this.effects = [];
     }
     draw(ctx, cam) {
         if(this.x < cam.x-100 || this.x > cam.x+SCREEN_W+100 || this.y < cam.y-100 || this.y > cam.y+SCREEN_H+100) return;
         
-        // Shadow
         ctx.fillStyle = 'rgba(0,0,0,0.3)';
         ctx.beginPath(); ctx.ellipse(this.x-cam.x, this.y+this.size/2-cam.y, this.size/1.5, this.size/3, 0, 0, Math.PI*2); ctx.fill();
 
-        // Body
         ctx.fillStyle = this.col;
         ctx.fillRect(this.x - this.size/2 - cam.x, this.y - this.size/2 - cam.y, this.size, this.size);
 
-        // HP Bar
         const rx = this.x - 15 - cam.x; const ry = this.y - this.size - 8 - cam.y;
         ctx.fillStyle = '#000'; ctx.fillRect(rx, ry, 30, 4);
         ctx.fillStyle = (this.hp/this.maxHp)>0.5 ? '#0f0' : '#f00';
@@ -304,19 +307,11 @@ class Entity {
         this.effects = this.effects.filter(e => e.time > 0);
         this.effects.forEach(e => {
             e.time--;
-            if(e.type === 'poison' && e.time % 60 === 0) {
-                this.takeDamage(e.val, true);
-                spawnFloat("독", this.x, this.y-30, '#0f0');
-            }
-            if(e.type === 'burn' && e.time % 30 === 0) {
-                this.takeDamage(e.val, true);
-                spawnFloat("화상", this.x, this.y-30, '#f50');
-            }
+            if(e.type === 'poison' && e.time % 60 === 0) { this.takeDamage(e.val, true); spawnFloat("독", this.x, this.y-30, '#0f0'); }
+            if(e.type === 'burn' && e.time % 30 === 0) { this.takeDamage(e.val, true); spawnFloat("화상", this.x, this.y-30, '#f50'); }
         });
     }
-    addEffect(type, time, val) {
-        this.effects.push({type, time, val});
-    }
+    addEffect(type, time, val) { this.effects.push({type, time, val}); }
 }
 
 class Player extends Entity {
@@ -344,22 +339,17 @@ class Player extends Entity {
         }
         for(let k in this.skills) if(this.skills[k]>0) this.skills[k]--;
 
-        // Enhanced Movement Logic: Move to Dest, but Attack Target if in range
         if(this.target && !this.target.dead) {
             const range = JOBS[this.job].range;
             const dist = getDist(this, this.target);
             
-            // If we have a destination, move there first (kiting)
             if(this.dest) {
                 this.moveTo(this.dest.x, this.dest.y);
                 if(getDist(this, this.dest) < 5) this.dest = null;
-            } 
-            // If no destination, chase target if out of range
-            else if(dist > range) {
+            } else if(dist > range) {
                 this.moveTo(this.target.x, this.target.y);
             }
 
-            // Always try to attack if in range
             if(dist <= range) {
                 if(Date.now() - this.lastAtk > Math.max(200, 1000 - this.stats.dex*10)) {
                     this.attack(this.target);
@@ -374,7 +364,7 @@ class Player extends Entity {
     }
 
     moveTo(tx, ty) {
-        if(this.effects.some(e => e.type === 'freeze')) return; // CC Check
+        if(this.effects.some(e => e.type === 'freeze')) return;
         const rad = Math.atan2(ty - this.y, tx - this.x);
         this.x += Math.cos(rad) * this.spd;
         this.y += Math.sin(rad) * this.spd;
@@ -399,20 +389,16 @@ class Player extends Entity {
             }
         }
 
-        // Job Passives
-        if(this.job === 0) dmg *= 1.0; 
-        if(this.job === 1 && Math.random() < 0.3) dmg *= 1.5; 
-        if(this.job === 2) dmg *= 1.2; 
-        if(this.job === 3 && Math.random() < 0.4) { dmg *= 2.0; isCrit = true; } // Assassin Crit
+        if(this.job === 3 && Math.random() < 0.4) { dmg *= 2.0; isCrit = true; } 
 
         dmg = Math.floor(dmg * (0.9 + Math.random()*0.2));
         t.takeDamage(dmg);
 
-        // Visuals
         const ang = Math.atan2(t.y - this.y, t.x - this.x);
         if(!isSkill) {
+            // V10: Pretty Slash
             game.particles.push({
-                type: 'slash', x: t.x, y: t.y, ang: ang, life: 10,
+                type: 'slash', x: t.x, y: t.y, ang: ang, life: 12,
                 col: this.eq.w && this.eq.w.rarity >= 4 ? '#0ff' : '#fff'
             });
         }
@@ -426,7 +412,6 @@ class Player extends Entity {
 
         spawnFloat(dmg, t.x, t.y-20, isCrit?'#ff0':'#fff');
         
-        // Item Effects
         if(this.eq.w && this.eq.w.effect) {
             if(Math.random() < 0.3) {
                 if(this.eq.w.effect === '번개') {
@@ -445,14 +430,15 @@ class Player extends Entity {
         if(this.skills[key] > 0) return;
         if(this.mp < 20) { log("MP가 부족합니다."); return; }
         this.mp -= 20;
-        this.skills[key] = 300; // 5s CD
+        this.skills[key] = 300; 
         
         const t = this.target;
+        const x = this.x, y = this.y;
 
         if(this.job === 0) { // Warrior
             if(key==='q' && t) { this.attack(t, 2.5, true); game.particles.push({type:'shock', x:t.x, y:t.y, col:'#f00', life:20}); }
-            else if(key==='w') { game.monsters.forEach(m => { if(getDist(this, m) < 100) this.attack(m, 0.8, true); }); game.particles.push({type:'spin', x:this.x, y:this.y, col:'#fa0', life:20}); }
-            else if(key==='e') { this.hp = Math.min(this.maxHp, this.hp + this.maxHp*0.3); spawnFloat("HEAL", this.x, this.y-30, '#0f0'); game.particles.push({type:'aura', x:this.x, y:this.y, col:'#0f0', life:30}); }
+            else if(key==='w') { game.monsters.forEach(m => { if(getDist(this, m) < 120) this.attack(m, 0.8, true); }); game.particles.push({type:'spin', x:x, y:y, col:'#fa0', life:20}); }
+            else if(key==='e') { this.hp = Math.min(this.maxHp, this.hp + this.maxHp*0.3); spawnFloat("HEAL", x, y-30, '#0f0'); game.particles.push({type:'aura', x:x, y:y, col:'#0f0', life:30}); }
         } 
         else if(this.job === 1) { // Archer
             if(key==='q' && t) { this.attack(t, 0.8, true); setTimeout(()=>this.attack(t, 0.8, true), 200); }
@@ -460,19 +446,19 @@ class Player extends Entity {
             else if(key==='e') { const ang = t ? Math.atan2(this.y-t.y, this.x-t.x) : 0; this.x += Math.cos(ang)*150; this.y += Math.sin(ang)*150; }
         }
         else if(this.job === 2) { // Mage
-            if(key==='q' && t) { game.particles.push({type:'proj', x:this.x, y:this.y, tx:t.x, ty:t.y, life:30, col:'#f50', size:10}); setTimeout(() => { this.attack(t, 3.0, true); game.particles.push({type:'explosion', x:t.x, y:t.y, col:'#f50', life:30}); }, 300); }
-            else if(key==='w') { game.monsters.forEach(m => { if(getDist(this, m) < 200) { this.attack(m, 0.5, true); m.addEffect('freeze', 120, 0); } }); game.particles.push({type:'aura', x:this.x, y:this.y, col:'#0ff', life:40}); }
+            if(key==='q' && t) { game.particles.push({type:'proj', x:x, y:y, tx:t.x, ty:t.y, life:30, col:'#f50', size:10}); setTimeout(() => { this.attack(t, 3.0, true); game.particles.push({type:'explosion', x:t.x, y:t.y, col:'#f50', life:30}); }, 300); }
+            else if(key==='w') { game.monsters.forEach(m => { if(getDist(this, m) < 200) { this.attack(m, 0.5, true); m.addEffect('freeze', 120, 0); } }); game.particles.push({type:'aura', x:x, y:y, col:'#0ff', life:40}); }
             else if(key==='e') { const ang = Math.random() * Math.PI * 2; this.x += Math.cos(ang)*200; this.y += Math.sin(ang)*200; game.particles.push({type:'shock', x:this.x, y:this.y, col:'#00f', life:20}); }
         }
         else if(this.job === 3) { // Assassin
             if(key==='q' && t) { this.x = t.x - 20; this.y = t.y; this.attack(t, 3.0, true); game.particles.push({type:'slash', x:t.x, y:t.y, ang:0, life:10, col:'#505'}); }
             else if(key==='w' && t) { t.addEffect('poison', 300, this.level*2); spawnFloat("POISON", t.x, t.y-30, '#0f0'); }
-            else if(key==='e') { this.spd += 2; setTimeout(()=>this.spd-=2, 3000); spawnFloat("SPEED UP", this.x, this.y-30, '#fff'); }
+            else if(key==='e') { this.spd += 2; setTimeout(()=>this.spd-=2, 3000); spawnFloat("SPEED UP", x, y-30, '#fff'); }
         }
         else if(this.job === 4) { // Paladin
             if(key==='q' && t) { this.attack(t, 1.5, true); t.addEffect('stun', 60, 0); game.particles.push({type:'shock', x:t.x, y:t.y, col:'#ff0', life:20}); }
-            else if(key==='w') { this.addEffect('shield', 300, 0); spawnFloat("SHIELD", this.x, this.y-30, '#ff0'); }
-            else if(key==='e') { this.hp = Math.min(this.maxHp, this.hp + this.maxHp*0.2); game.monsters.forEach(m=>{if(getDist(this,m)<150) this.attack(m,1.0,true)}); game.particles.push({type:'aura', x:this.x, y:this.y, col:'#ff0', life:30}); }
+            else if(key==='w') { this.addEffect('shield', 300, 0); spawnFloat("SHIELD", x, y-30, '#ff0'); }
+            else if(key==='e') { this.hp = Math.min(this.maxHp, this.hp + this.maxHp*0.2); game.monsters.forEach(m=>{if(getDist(this,m)<150) this.attack(m,1.0,true)}); game.particles.push({type:'aura', x:x, y:y, col:'#ff0', life:30}); }
         }
     }
 
@@ -485,7 +471,7 @@ class Player extends Entity {
         this.hp -= real;
         spawnFloat(Math.floor(real), this.x, this.y-20, '#f00');
         if(this.hp <= 0) {
-            log("사망했습니다. 마을에서 부활합니다.", "c-dmg");
+            log("사망했습니다.", "c-dmg");
             this.x=2000; this.y=2000; this.hp=this.maxHp; this.mp=this.maxMp;
             this.dead = false; this.effects = [];
             game.save();
@@ -523,9 +509,7 @@ class Monster extends Entity {
         this.gold = rand(5, 15) * scale;
         this.spd = 1.5 + (Math.random()*0.5);
         
-        // Boss Pattern Vars
         this.patTimer = 0;
-        this.patState = 0;
     }
 
     update(p) {
@@ -564,14 +548,13 @@ class Monster extends Entity {
 
     bossBehavior(p, dist) {
         this.patTimer++;
-        if(this.patTimer > 180) { // Every 3 sec
+        if(this.patTimer > 180) { 
             this.patTimer = 0;
             const action = rand(0, 2);
-            
             if(action === 0) { // AoE
                 game.particles.push({type:'aoe_warn', x:p.x, y:p.y, life:60, size:100});
                 setTimeout(() => {
-                    if(getDist(p, {x:p.x, y:p.y}) < 100) p.takeDamage(this.atk * 1.5); // Logic simplified
+                    if(getDist(p, {x:p.x, y:p.y}) < 100) p.takeDamage(this.atk * 1.5);
                     game.particles.push({type:'explosion', x:p.x, y:p.y, col:'#f00', life:30, size:100});
                 }, 1000);
             } else if(action === 1) { // Barrage
@@ -587,7 +570,6 @@ class Monster extends Entity {
                 if(getDist(this, p) < 50) p.takeDamage(this.atk);
             }
         }
-        // Basic Chase
         if(dist > 50) {
             const ang = Math.atan2(p.y - this.y, p.x - this.x);
             this.x += Math.cos(ang) * (this.spd * 0.5);
@@ -662,16 +644,12 @@ class Game {
                 this.player.dest = null;
                 game.particles.push({type:'shock', x:t.x, y:t.y, col:'#f00', life:10, size:30});
             } else {
-                // V9: Click ground moves but keeps target
                 this.player.dest = {x:wx, y:wy};
                 game.particles.push({type:'shock', x:wx, y:wy, col:'#0f0', life:10, size:10});
             }
         });
         
-        // Double click to clear target
-        CANVAS.addEventListener('dblclick', e => {
-            this.player.target = null;
-        });
+        CANVAS.addEventListener('dblclick', e => { this.player.target = null; });
 
         window.addEventListener('keydown', e => {
             if(['q','w','e'].includes(e.key.toLowerCase())) this.player.useSkill(e.key.toLowerCase());
@@ -691,7 +669,7 @@ class Game {
         });
         CANVAS.width = SCREEN_W; CANVAS.height = SCREEN_H;
 
-        if(localStorage.getItem('rpg_v8') || localStorage.getItem('rpg_v7')) {
+        if(localStorage.getItem('rpg_v10') || localStorage.getItem('rpg_v8')) {
             this.load();
             document.getElementById('job-select').style.display = 'none';
         }
@@ -707,6 +685,7 @@ class Game {
         this.player.job = id;
         this.player.maxHp *= JOBS[id].hp; this.player.hp = this.player.maxHp;
         this.player.maxMp *= JOBS[id].mp; this.player.mp = this.player.maxMp;
+        this.player.spd = JOBS[id].spd;
         document.getElementById('job-select').style.display = 'none';
         this.ui.updatePanel();
         this.ui.updateIcons();
@@ -733,7 +712,6 @@ class Game {
         this.player.update();
         this.monsters.forEach(m => m.update(this.player));
 
-        // Boss UI
         const bossUi = document.getElementById('boss-ui');
         if(this.activeBoss && !this.activeBoss.dead) {
             bossUi.style.display = 'block';
@@ -767,26 +745,58 @@ class Game {
         this.monsters.forEach(m => m.draw(ctx, this.cam));
         this.player.draw(ctx, this.cam);
 
+        if(this.player.atkAnim > 0) {
+            ctx.save();
+            ctx.translate(this.player.x - this.cam.x, this.player.y - this.cam.y);
+            let ang = 0;
+            if(this.player.target) ang = Math.atan2(this.player.target.y - this.player.y, this.player.target.x - this.player.x);
+            else if(this.player.dest) ang = Math.atan2(this.player.dest.y - this.player.y, this.player.dest.x - this.player.x);
+            
+            ctx.rotate(ang + (this.player.atkAnim/15)); 
+            
+            ctx.fillStyle = this.player.eq.w ? RARITY[this.player.eq.w.rarity].c : '#ccc';
+            ctx.shadowBlur = this.player.eq.w && this.player.eq.w.rarity >= 4 ? 10 : 0;
+            ctx.shadowColor = ctx.fillStyle;
+            ctx.fillRect(10, -2, 30, 4); 
+            ctx.restore();
+        }
+
+        // V10: Pretty Particles
         this.particles = this.particles.filter(p => p.life > 0);
         this.particles.forEach(p => {
             p.update && p.update();
             if(p.type === 'text') p.draw(ctx, this.cam);
             else if(p.type === 'slash') {
-                ctx.save(); ctx.translate(p.x-this.cam.x, p.y-this.cam.y); ctx.rotate(p.ang);
-                ctx.fillStyle = p.col; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(60, -20); ctx.lineTo(60, 20); ctx.fill();
-                ctx.restore(); p.life--;
+                ctx.save(); 
+                ctx.translate(p.x-this.cam.x, p.y-this.cam.y); 
+                ctx.rotate(p.ang);
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.fillStyle = p.col;
+                ctx.beginPath();
+                ctx.arc(0, 0, 60, -0.5, 0.5);
+                ctx.fill();
+                ctx.restore(); 
+                p.life--;
             }
             else if(p.type === 'proj') {
                 p.x += (p.tx - p.x) * 0.2; p.y += (p.ty - p.y) * 0.2;
-                ctx.fillStyle = p.col; ctx.beginPath(); ctx.arc(p.x-this.cam.x, p.y-this.cam.y, p.size||5, 0, Math.PI*2); ctx.fill();
-                // Enemy Proj Collision
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.fillStyle = p.col; ctx.beginPath(); ctx.arc(p.x-this.cam.x, p.y-this.cam.y, p.size||6, 0, Math.PI*2); ctx.fill();
+                // Trail
+                ctx.globalAlpha = 0.5;
+                ctx.beginPath(); ctx.arc(p.x-this.cam.x - (p.tx-p.x)*0.1, p.y-this.cam.y - (p.ty-p.y)*0.1, p.size||4, 0, Math.PI*2); ctx.fill();
+                ctx.restore();
                 if(p.enemy && getDist(p, this.player) < 20) { this.player.takeDamage(p.atk); p.life=0; }
                 p.life--;
             }
             else if(p.type === 'explosion') {
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
                 ctx.fillStyle = p.col; ctx.globalAlpha = p.life/30;
                 ctx.beginPath(); ctx.arc(p.x-this.cam.x, p.y-this.cam.y, p.size||50, 0, Math.PI*2); ctx.fill();
-                ctx.globalAlpha = 1.0; p.life--;
+                ctx.restore();
+                p.life--;
             }
             else if(p.type === 'aoe_warn') {
                  ctx.strokeStyle = '#f00'; ctx.lineWidth = 2; ctx.globalAlpha = 0.5;
@@ -795,8 +805,12 @@ class Game {
                  p.life--;
             }
             else if(p.type === 'shock' || p.type === 'spin' || p.type === 'aura') {
-                // ... (Existing particle logic)
-                ctx.strokeStyle = p.col; ctx.beginPath(); ctx.arc(p.x-this.cam.x, p.y-this.cam.y, (30-p.life)*2, 0, Math.PI*2); ctx.stroke(); p.life--;
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.strokeStyle = p.col; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.arc(p.x-this.cam.x, p.y-this.cam.y, (40-p.life)*2, 0, Math.PI*2); ctx.stroke(); 
+                ctx.restore();
+                p.life--;
             }
         });
 
@@ -812,24 +826,60 @@ class Game {
         requestAnimationFrame(this.loop);
     }
 
-    save() {
-        const d = { p: this.player, ts: Date.now() };
-        localStorage.setItem('rpg_v8', JSON.stringify(d)); // Keep V8 key for compatibility
+    // V10: Robust Save Logic
+    save(manual = false) {
+        const p = this.player;
+        // Save only data, not the object itself to avoid circular refs
+        const saveData = {
+            level: p.level, exp: p.exp, maxExp: p.maxExp,
+            gold: p.gold, hp: p.hp, maxHp: p.maxHp, mp: p.mp, maxMp: p.maxMp,
+            stats: p.stats, job: p.job, potions: p.potions,
+            inv: p.inv, eq: p.eq, x: p.x, y: p.y
+        };
+        localStorage.setItem('rpg_v10', JSON.stringify(saveData));
+        if(manual) alert("저장되었습니다.");
+    }
+
+    reset() {
+        if(confirm("정말 초기화하시겠습니까?")) {
+            localStorage.removeItem('rpg_v10');
+            location.reload();
+        }
     }
 
     load() {
         try {
-            let json = localStorage.getItem('rpg_v8') || localStorage.getItem('rpg_v7');
+            // V10: Try V10 first, then fallbacks
+            let json = localStorage.getItem('rpg_v10') || localStorage.getItem('rpg_v8') || localStorage.getItem('rpg_v7');
             if(json) {
                 const d = JSON.parse(json);
-                Object.assign(this.player, d.p);
-                this.player.inv = this.player.inv.map(i => { const n=new Item(1); Object.assign(n,i); return n; });
-                if(this.player.eq.w) { const n=new Item(1); Object.assign(n,this.player.eq.w); this.player.eq.w=n; }
-                if(this.player.eq.a) { const n=new Item(1); Object.assign(n,this.player.eq.a); this.player.eq.a=n; }
+                const p = this.player;
+                
+                // Restore simple props
+                p.level = d.level; p.exp = d.exp; p.maxExp = d.maxExp;
+                p.gold = d.gold; p.hp = d.hp; p.maxHp = d.maxHp; p.mp = d.mp; p.maxMp = d.maxMp;
+                p.stats = d.stats; p.job = d.job; p.potions = d.potions;
+                p.x = d.x; p.y = d.y;
+                
+                // Restore speed based on job
+                p.spd = JOBS[p.job].spd;
+
+                // Re-instantiate Items
+                const restoreItem = (i) => {
+                    const n = new Item(1);
+                    Object.assign(n, i);
+                    return n;
+                };
+
+                p.inv = d.inv.map(restoreItem);
+                if(d.eq.w) p.eq.w = restoreItem(d.eq.w);
+                if(d.eq.a) p.eq.a = restoreItem(d.eq.a);
+
                 this.ui.updatePanel();
+                this.ui.updateIcons();
                 log("데이터 로드 완료.");
             }
-        } catch(e) { console.error(e); }
+        } catch(e) { console.error("Load Failed", e); }
     }
 }
 
