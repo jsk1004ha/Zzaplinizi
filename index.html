@@ -2,23 +2,25 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>RPG V6: Fixed UI</title>
+    <title>RPG V9: Grand Expansion</title>
     <style>
         /* CSS Styles */
         body { margin: 0; overflow: hidden; background: #050505; color: #ccc; font-family: 'Segoe UI', sans-serif; user-select: none; }
         canvas { display: block; cursor: crosshair; }
 
         /* UI Base */
-        .ui-win { position: absolute; background: rgba(16, 18, 20, 0.9); border: 1px solid #444; border-radius: 4px; padding: 8px; box-shadow: 0 0 15px #000; pointer-events: auto; }
-        .ui-head { background: linear-gradient(90deg, #222, #333); color: #ec0; padding: 5px; text-align: center; font-weight: bold; border-bottom: 1px solid #555; margin: -8px -8px 8px -8px; border-radius: 4px 4px 0 0; font-size: 13px; }
+        .ui-win { position: absolute; background: rgba(16, 18, 20, 0.95); border: 1px solid #444; border-radius: 4px; padding: 8px; box-shadow: 0 0 15px #000; pointer-events: auto; transition: height 0.3s; overflow: hidden; }
+        .ui-head { background: linear-gradient(90deg, #222, #333); color: #ec0; padding: 5px; text-align: center; font-weight: bold; border-bottom: 1px solid #555; margin: -8px -8px 8px -8px; border-radius: 4px 4px 0 0; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
+        
         button { background: #333; border: 1px solid #555; color: #ddd; padding: 4px 10px; cursor: pointer; font-size: 11px; transition: 0.1s; }
         button:hover { background: #555; color: #fff; border-color: #888; }
-        .btn-close { float: right; background: #622; border-color: #844; }
+        .btn-mini { padding: 2px 6px; font-size: 10px; }
+        .btn-close { background: #622; border-color: #844; }
 
         /* HUD */
         #hud { top: 10px; left: 10px; width: 260px; }
         .bar-wrap { background: #111; height: 14px; border: 1px solid #333; margin-bottom: 3px; position: relative; }
-        .bar-fill { height: 100%; transition: width 0.1s linear; } /* Smooth transition */
+        .bar-fill { height: 100%; transition: width 0.1s linear; }
         .bar-txt { position: absolute; top: 0; left: 0; width: 100%; text-align: center; font-size: 10px; line-height: 14px; color: #fff; text-shadow: 1px 1px 0 #000; }
         
         /* Skill Bar */
@@ -29,6 +31,7 @@
 
         /* Right Panel */
         #panel { top: 10px; right: 10px; width: 280px; max-height: 90vh; display: flex; flex-direction: column; }
+        #panel-content { transition: opacity 0.2s; }
         #inv-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; max-height: 200px; overflow-y: auto; background: #080808; padding: 3px; border: 1px inset #333; }
         .slot { width: 40px; height: 40px; background: #1a1a1a; border: 1px solid #333; position: relative; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 9px; text-align: center; }
         .slot:hover { border-color: #aaa; background: #2a2a2a; }
@@ -51,9 +54,10 @@
         .c-sys { color: #aaa; } .c-get { color: #0f0; } .c-dmg { color: #f55; } .c-rare { color: #fa0; font-weight: bold; }
 
         /* Boss Bar */
-        #boss-ui { position: absolute; top: 80px; left: 50%; transform: translateX(-50%); width: 500px; display: none; pointer-events: none; }
-        #boss-hp { width: 100%; height: 20px; background: #300; border: 2px solid #f00; }
-        #boss-fill { width: 100%; height: 100%; background: #f00; transition: width 0.1s; }
+        #boss-ui { position: absolute; top: 80px; left: 50%; transform: translateX(-50%); width: 600px; display: none; pointer-events: none; }
+        #boss-hp { width: 100%; height: 25px; background: #200; border: 2px solid #f00; position: relative; }
+        #boss-fill { width: 100%; height: 100%; background: linear-gradient(90deg, #f00, #900); transition: width 0.1s; }
+        #boss-name { text-align:center; color:#fff; font-weight:bold; text-shadow:2px 2px 0 #000; margin-bottom:5px; font-size: 16px; }
 
         @keyframes pulse { 0% { border-color: #f00; } 50% { border-color: #800; } 100% { border-color: #f00; } }
         @keyframes glow { from { box-shadow: 0 0 5px #0ff; } to { box-shadow: 0 0 15px #0ff; } }
@@ -63,11 +67,17 @@
 
 <div id="game-container">
     <canvas id="gameCanvas"></canvas>
-    <div id="boss-ui"><div style="text-align:center; color:#f55; font-weight:bold; text-shadow:1px 1px 0 #000;">BOSS</div><div id="boss-hp"><div id="boss-fill"></div></div></div>
+    <div id="boss-ui">
+        <div id="boss-name">BOSS NAME</div>
+        <div id="boss-hp"><div id="boss-fill"></div></div>
+    </div>
 
     <!-- HUD -->
     <div id="hud" class="ui-win">
-        <div class="ui-head"><span id="u-name">Player</span> (Lv.<span id="u-lv">1</span>) <span style="font-size:10px; color:#aaa" id="u-job">전사</span></div>
+        <div class="ui-head"><span>정보</span></div>
+        <div style="font-size:12px; margin-bottom:5px; text-align:center;">
+            <span id="u-name">Player</span> (Lv.<span id="u-lv">1</span>) <span style="color:#aaa" id="u-job">전사</span>
+        </div>
         <div class="bar-wrap"><div id="hp-bar" class="bar-fill" style="background:#c33; width:100%"></div><div class="bar-txt">HP</div></div>
         <div class="bar-wrap"><div id="mp-bar" class="bar-fill" style="background:#33c; width:100%"></div><div class="bar-txt">MP</div></div>
         <div class="bar-wrap"><div id="exp-bar" class="bar-fill" style="background:#ca0; width:0%"></div><div class="bar-txt">EXP</div></div>
@@ -79,36 +89,41 @@
 
     <!-- Skill Bar -->
     <div id="skill-bar">
-        <div class="skill-slot" id="slot-q"><span class="key-hint">Q</span><span class="icon">⚔️</span><div class="skill-cd" id="cd-q"></div></div>
-        <div class="skill-slot" id="slot-w"><span class="key-hint">W</span><span class="icon">🌪️</span><div class="skill-cd" id="cd-w"></div></div>
-        <div class="skill-slot" id="slot-e"><span class="key-hint">E</span><span class="icon">⚡</span><div class="skill-cd" id="cd-e"></div></div>
+        <div class="skill-slot" id="slot-q"><span class="key-hint">Q</span><span class="icon"></span><div class="skill-cd" id="cd-q"></div></div>
+        <div class="skill-slot" id="slot-w"><span class="key-hint">W</span><span class="icon"></span><div class="skill-cd" id="cd-w"></div></div>
+        <div class="skill-slot" id="slot-e"><span class="key-hint">E</span><span class="icon"></span><div class="skill-cd" id="cd-e"></div></div>
         <div class="skill-slot" style="border-color:#a33"><span class="key-hint">P</span>🧪<span style="position:absolute; bottom:2px; right:2px; font-size:10px;" id="u-pot">0</span></div>
     </div>
 
     <!-- Right Panel -->
     <div id="panel" class="ui-win">
-        <div class="ui-head">정보</div>
-        <div style="font-size:11px; margin-bottom:5px;">
-            공격력: <span id="st-atk">0</span> | 방어력: <span id="st-def">0</span><br>
-            스탯 포인트: <span id="st-pt" style="color:#f55">0</span>
+        <div class="ui-head">
+            <span>캐릭터 정보</span>
+            <button class="btn-mini" onclick="game.ui.togglePanel()">▼</button>
         </div>
-        <div style="display:flex; gap:2px; margin-bottom:5px;">
-            <button onclick="game.player.upStat('str')">힘</button>
-            <button onclick="game.player.upStat('dex')">민첩</button>
-            <button onclick="game.player.upStat('con')">체력</button>
-        </div>
-        <div style="border-top:1px solid #444; padding-top:5px;">
-            <div style="font-size:11px; color:#888;">장비</div>
-            <div style="display:flex; gap:5px;">
-                <div id="eq-w" class="slot">무기</div>
-                <div id="eq-a" class="slot">갑옷</div>
+        <div id="panel-content">
+            <div style="font-size:11px; margin-bottom:5px; margin-top:5px;">
+                공격력: <span id="st-atk">0</span> | 방어력: <span id="st-def">0</span><br>
+                스탯 포인트: <span id="st-pt" style="color:#f55">0</span>
             </div>
-        </div>
-        <div class="ui-head" style="margin-top:10px;">인벤토리 (<span id="inv-cnt">0</span>)</div>
-        <div id="inv-grid"></div>
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:2px; margin-top:5px;">
-            <button onclick="game.ui.toggleShop()">상점</button>
-            <button onclick="game.ui.toggleSmith()">대장간</button>
+            <div style="display:flex; gap:2px; margin-bottom:5px;">
+                <button onclick="game.player.upStat('str')">힘</button>
+                <button onclick="game.player.upStat('dex')">민첩</button>
+                <button onclick="game.player.upStat('con')">체력</button>
+            </div>
+            <div style="border-top:1px solid #444; padding-top:5px;">
+                <div style="font-size:11px; color:#888;">장비</div>
+                <div style="display:flex; gap:5px;">
+                    <div id="eq-w" class="slot">무기</div>
+                    <div id="eq-a" class="slot">갑옷</div>
+                </div>
+            </div>
+            <div class="ui-head" style="margin-top:10px; font-size:11px;">인벤토리 (<span id="inv-cnt">0</span>)</div>
+            <div id="inv-grid"></div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:2px; margin-top:5px;">
+                <button onclick="game.ui.toggleShop()">상점</button>
+                <button onclick="game.ui.toggleSmith()">대장간</button>
+            </div>
         </div>
     </div>
 
@@ -121,19 +136,31 @@
     <div id="smith-modal" class="ui-win modal">
         <div class="ui-head">대장간 <button class="btn-close" onclick="game.ui.closeModals()">X</button></div>
         <div style="padding:10px; text-align:center;">
-            <div id="smith-slot" class="slot" style="margin:0 auto 10px auto; width:60px; height:60px;" onclick="game.smith.clear()">선택</div>
-            <button style="width:100%; padding:10px;" onclick="game.smith.upgrade()">강화 (1000G)</button>
-            <div style="margin-top:10px; font-size:11px; color:#aaa;">인벤토리에서 아이템을 클릭하여 등록</div>
+            <div style="border-bottom:1px solid #444; padding-bottom:10px; margin-bottom:10px;">
+                <h4 style="margin:0 0 5px 0; color:#fa0;">[ 장비 강화 ]</h4>
+                <div id="smith-slot" class="slot" style="margin:0 auto 5px auto; width:50px; height:50px;" onclick="game.smith.clear('up')">선택</div>
+                <button style="width:80%; padding:5px;" onclick="game.smith.upgrade()">강화 시도 (1000G)</button>
+            </div>
+            <div>
+                <h4 style="margin:0 0 5px 0; color:#0ff;">[ 각인 부여 ]</h4>
+                <div style="display:flex; justify-content:center; gap:10px; margin-bottom:5px;">
+                    <div id="smith-en-item" class="slot" style="width:50px; height:50px;" onclick="game.smith.clear('enItem')">장비</div>
+                    <div id="smith-en-stone" class="slot" style="width:50px; height:50px; border-radius:50%; border-color:#a0a;" onclick="game.smith.clear('enStone')">각인석</div>
+                </div>
+                <button style="width:80%; padding:5px;" onclick="game.smith.engrave()">각인 하기 (500G)</button>
+            </div>
         </div>
     </div>
 
     <!-- Job Select -->
     <div id="job-select" class="ui-win modal" style="display:block; text-align:center;">
         <div class="ui-head">직업 선택</div>
-        <div style="padding:20px;">
-            <button style="font-size:14px; padding:10px; width:100%; margin-bottom:5px;" onclick="game.setJob(0)">전사 (근접/밸런스)</button>
-            <button style="font-size:14px; padding:10px; width:100%; margin-bottom:5px;" onclick="game.setJob(1)">궁수 (원거리/속도)</button>
-            <button style="font-size:14px; padding:10px; width:100%;" onclick="game.setJob(2)">마법사 (광역/폭딜)</button>
+        <div style="padding:15px; display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+            <button style="padding:15px;" onclick="game.setJob(0)"><b>전사</b><br><span style="font-size:10px; color:#aaa">근접/밸런스</span></button>
+            <button style="padding:15px;" onclick="game.setJob(1)"><b>궁수</b><br><span style="font-size:10px; color:#aaa">원거리/속도</span></button>
+            <button style="padding:15px;" onclick="game.setJob(2)"><b>마법사</b><br><span style="font-size:10px; color:#aaa">광역/폭딜</span></button>
+            <button style="padding:15px;" onclick="game.setJob(3)"><b>암살자</b><br><span style="font-size:10px; color:#aaa">치명/독</span></button>
+            <button style="padding:15px; grid-column: span 2;" onclick="game.setJob(4)"><b>성기사</b><br><span style="font-size:10px; color:#aaa">방어/회복</span></button>
         </div>
     </div>
 
@@ -148,22 +175,26 @@ const CANVAS = document.getElementById('gameCanvas');
 const CTX = CANVAS.getContext('2d');
 let SCREEN_W = window.innerWidth;
 let SCREEN_H = window.innerHeight;
-const WORLD_W = 6000;
-const WORLD_H = 6000;
+const WORLD_W = 8000; // Expanded Map
+const WORLD_H = 8000;
 
-// Zones
+// Zones (Expanded)
 const ZONES = [
-    { name: "평화의 숲", color: "#1a2b1a", x: 0, y: 0, w: 3000, h: 3000, lv: 1 },
-    { name: "황무지", color: "#3d3018", x: 3000, y: 0, w: 3000, h: 3000, lv: 2 },
-    { name: "설원", color: "#15202b", x: 0, y: 3000, w: 3000, h: 3000, lv: 3 },
-    { name: "지옥", color: "#220505", x: 3000, y: 3000, w: 3000, h: 3000, lv: 4 }
+    { name: "평화의 숲", color: "#1a2b1a", x: 0, y: 0, w: 4000, h: 4000, lv: 1 },
+    { name: "황무지", color: "#3d3018", x: 4000, y: 0, w: 4000, h: 4000, lv: 2 },
+    { name: "설원", color: "#15202b", x: 0, y: 4000, w: 3000, h: 4000, lv: 3 },
+    { name: "지옥", color: "#220505", x: 3000, y: 4000, w: 3000, h: 4000, lv: 4 },
+    { name: "맹독의 늪", color: "#1a2205", x: 6000, y: 4000, w: 2000, h: 2000, lv: 5 },
+    { name: "천공의 섬", color: "#445566", x: 6000, y: 6000, w: 2000, h: 2000, lv: 6 }
 ];
 
 const TOWNS = [
-    { name: "메인 마을", x: 1500, y: 1500, r: 400 },
-    { name: "사막 전초기지", x: 4500, y: 1500, r: 300 },
-    { name: "얼음 요새", x: 1500, y: 4500, r: 300 },
-    { name: "최후의 보루", x: 4500, y: 4500, r: 300 }
+    { name: "메인 마을", x: 2000, y: 2000, r: 400 },
+    { name: "사막 전초기지", x: 6000, y: 2000, r: 300 },
+    { name: "얼음 요새", x: 1500, y: 6000, r: 300 },
+    { name: "최후의 보루", x: 4500, y: 6000, r: 300 },
+    { name: "늪지 오두막", x: 7000, y: 5000, r: 200 },
+    { name: "천공 신전", x: 7000, y: 7000, r: 200 }
 ];
 
 const RARITY = [
@@ -176,10 +207,21 @@ const RARITY = [
     { n: '태고', c: '#0ff', cl: 'r-6', m: 12.0 }
 ];
 
+const ENGRAVES = [
+    { id: 'vamp', n: '흡혈', desc: '체력 흡수' },
+    { id: 'crit', n: '치명', desc: '치명타 확률' },
+    { id: 'exe', n: '처형', desc: '낮은 체력 추뎀' },
+    { id: 'blast', n: '폭발', desc: '광역 피해' },
+    { id: 'stun', n: '기절', desc: '적 기절' },
+    { id: 'spd', n: '신속', desc: '공속 증가' }
+];
+
 const JOBS = [
-    { n: '전사', hp: 1.2, mp: 0.8, range: 60, skills: ['강타', '휠윈드', '전투함성'] },
-    { n: '궁수', hp: 0.8, mp: 1.0, range: 250, skills: ['더블샷', '화살비', '회피사격'] },
-    { n: '마법사', hp: 0.7, mp: 1.5, range: 200, skills: ['파이어볼', '블리자드', '텔레포트'] }
+    { n: '전사', hp: 1.2, mp: 0.8, range: 60, icons: ['⚔️','🌪️','⚡'] },
+    { n: '궁수', hp: 0.8, mp: 1.0, range: 250, icons: ['🏹','🌧️','💨'] },
+    { n: '마법사', hp: 0.7, mp: 1.5, range: 200, icons: ['🔥','❄️','✨'] },
+    { n: '암살자', hp: 0.9, mp: 1.0, range: 60, icons: ['🗡️','☠️','👻'] },
+    { n: '성기사', hp: 1.4, mp: 1.2, range: 60, icons: ['🔨','🛡️','✝️'] }
 ];
 
 /**
@@ -210,20 +252,13 @@ function spawnFloat(txt, x, y, col) {
 class Item {
     constructor(lv, type) {
         this.id = Math.random().toString(36).substr(2);
-        this.type = type || (Math.random()<0.5 ? 'w' : 'a'); // w:weapon, a:armor, s:stone
-        if(type === 's') {
-            this.name = "각인석"; this.rarity = 2; this.price = 200; return;
-        }
+        this.type = type || (Math.random()<0.5 ? 'w' : 'a');
+        if(type === 's') { this.name = "각인석"; this.rarity = 2; this.price = 200; return; }
         
-        // Rarity Roll
         const r = Math.random();
         let ri = 0;
-        if(r < 0.001) ri = 6;
-        else if(r < 0.005) ri = 5;
-        else if(r < 0.02) ri = 4;
-        else if(r < 0.08) ri = 3;
-        else if(r < 0.25) ri = 2;
-        else if(r < 0.5) ri = 1;
+        if(r < 0.0002) ri = 6; else if(r < 0.001) ri = 5; else if(r < 0.005) ri = 4;
+        else if(r < 0.03) ri = 3; else if(r < 0.15) ri = 2; else if(r < 0.4) ri = 1;
 
         const info = RARITY[ri];
         this.rarity = ri;
@@ -233,7 +268,6 @@ class Item {
         this.name = `${info.n} ${this.type==='w'?'검':'갑옷'}`;
         this.price = Math.floor(this.power * 5);
 
-        // High Tier Effect
         if(ri >= 4) {
             const effects = ['번개', '화염', '빙결'];
             this.effect = effects[rand(0,2)];
@@ -246,10 +280,10 @@ class Entity {
     constructor(x, y, sz, col) {
         this.x = x; this.y = y; this.size = sz; this.col = col;
         this.hp = 100; this.maxHp = 100; this.dead = false;
-        this.anim = 0; 
+        this.effects = []; // {type, time, val}
     }
     draw(ctx, cam) {
-        if(this.x < cam.x-50 || this.x > cam.x+SCREEN_W+50 || this.y < cam.y-50 || this.y > cam.y+SCREEN_H+50) return;
+        if(this.x < cam.x-100 || this.x > cam.x+SCREEN_W+100 || this.y < cam.y-100 || this.y > cam.y+SCREEN_H+100) return;
         
         // Shadow
         ctx.fillStyle = 'rgba(0,0,0,0.3)';
@@ -265,11 +299,29 @@ class Entity {
         ctx.fillStyle = (this.hp/this.maxHp)>0.5 ? '#0f0' : '#f00';
         ctx.fillRect(rx, ry, 30 * (this.hp/this.maxHp), 4);
     }
+    updateEffects() {
+        if(this.dead) return;
+        this.effects = this.effects.filter(e => e.time > 0);
+        this.effects.forEach(e => {
+            e.time--;
+            if(e.type === 'poison' && e.time % 60 === 0) {
+                this.takeDamage(e.val, true);
+                spawnFloat("독", this.x, this.y-30, '#0f0');
+            }
+            if(e.type === 'burn' && e.time % 30 === 0) {
+                this.takeDamage(e.val, true);
+                spawnFloat("화상", this.x, this.y-30, '#f50');
+            }
+        });
+    }
+    addEffect(type, time, val) {
+        this.effects.push({type, time, val});
+    }
 }
 
 class Player extends Entity {
     constructor() {
-        super(1500, 1500, 20, '#fff');
+        super(2000, 2000, 20, '#fff');
         this.level = 1; this.exp = 0; this.maxExp = 100;
         this.gold = 0; this.inv = []; this.eq = { w:null, a:null };
         this.stats = { str:5, dex:5, con:5, pt:0 };
@@ -278,32 +330,40 @@ class Player extends Entity {
         this.potions = 5;
         this.target = null; this.dest = null;
         this.lastAtk = 0;
-        this.skills = { q:0, w:0, e:0 }; // Cooldowns
+        this.skills = { q:0, w:0, e:0 }; 
         this.spd = 4;
         this.atkAnim = 0;
     }
 
     update() {
         if(this.dead) return;
-        // Regen
+        this.updateEffects();
         if(game.frame % 60 === 0) {
             this.hp = Math.min(this.maxHp, this.hp + this.stats.con*0.2);
             this.mp = Math.min(this.maxMp, this.mp + 2);
         }
-        // CD Reduction
         for(let k in this.skills) if(this.skills[k]>0) this.skills[k]--;
 
-        // Move & Attack Logic
+        // Enhanced Movement Logic: Move to Dest, but Attack Target if in range
         if(this.target && !this.target.dead) {
             const range = JOBS[this.job].range;
             const dist = getDist(this, this.target);
+            
+            // If we have a destination, move there first (kiting)
+            if(this.dest) {
+                this.moveTo(this.dest.x, this.dest.y);
+                if(getDist(this, this.dest) < 5) this.dest = null;
+            } 
+            // If no destination, chase target if out of range
+            else if(dist > range) {
+                this.moveTo(this.target.x, this.target.y);
+            }
+
+            // Always try to attack if in range
             if(dist <= range) {
-                this.dest = null;
                 if(Date.now() - this.lastAtk > Math.max(200, 1000 - this.stats.dex*10)) {
                     this.attack(this.target);
                 }
-            } else {
-                this.moveTo(this.target.x, this.target.y);
             }
         } else if(this.dest) {
             if(getDist(this, this.dest) < 5) this.dest = null;
@@ -314,6 +374,7 @@ class Player extends Entity {
     }
 
     moveTo(tx, ty) {
+        if(this.effects.some(e => e.type === 'freeze')) return; // CC Check
         const rad = Math.atan2(ty - this.y, tx - this.x);
         this.x += Math.cos(rad) * this.spd;
         this.y += Math.sin(rad) * this.spd;
@@ -327,26 +388,36 @@ class Player extends Entity {
         let dmg = (this.stats.str * 2 + (this.eq.w ? this.eq.w.power + this.eq.w.up*5 : 0)) * multi;
         let isCrit = false;
         
-        if(this.eq.w && this.eq.w.engrave === 'crit' && Math.random() < 0.2) { dmg *= 2; isCrit = true; }
-        if(this.eq.w && this.eq.w.engrave === 'exe' && (t.hp/t.maxHp)<0.3) dmg *= 1.5;
+        const engrave = this.eq.w ? this.eq.w.engrave : null;
+        if(engrave) {
+            if(engrave.id === 'crit' && Math.random() < 0.2) { dmg *= 2; isCrit = true; }
+            if(engrave.id === 'exe' && (t.hp/t.maxHp)<0.3) dmg *= 1.5;
+            if(engrave.id === 'vamp') {
+                const heal = Math.ceil(dmg * 0.1);
+                this.hp = Math.min(this.maxHp, this.hp + heal);
+                spawnFloat(`+${heal}`, this.x, this.y-30, '#0f0');
+            }
+        }
 
+        // Job Passives
         if(this.job === 0) dmg *= 1.0; 
         if(this.job === 1 && Math.random() < 0.3) dmg *= 1.5; 
         if(this.job === 2) dmg *= 1.2; 
+        if(this.job === 3 && Math.random() < 0.4) { dmg *= 2.0; isCrit = true; } // Assassin Crit
 
         dmg = Math.floor(dmg * (0.9 + Math.random()*0.2));
         t.takeDamage(dmg);
 
+        // Visuals
         const ang = Math.atan2(t.y - this.y, t.x - this.x);
-        
         if(!isSkill) {
             game.particles.push({
-                type: 'swing', x: this.x, y: this.y, ang: ang, life: 10,
+                type: 'slash', x: t.x, y: t.y, ang: ang, life: 10,
                 col: this.eq.w && this.eq.w.rarity >= 4 ? '#0ff' : '#fff'
             });
         }
         
-        if(this.job !== 0 && !isSkill) {
+        if(this.job !== 0 && this.job !== 3 && this.job !== 4 && !isSkill) {
              game.particles.push({
                 type: 'proj', x: this.x, y: this.y, tx: t.x, ty: t.y, life: 20,
                 col: this.job===1 ? '#ff0' : '#0af'
@@ -355,14 +426,16 @@ class Player extends Entity {
 
         spawnFloat(dmg, t.x, t.y-20, isCrit?'#ff0':'#fff');
         
+        // Item Effects
         if(this.eq.w && this.eq.w.effect) {
             if(Math.random() < 0.3) {
                 if(this.eq.w.effect === '번개') {
                     spawnFloat("⚡", t.x, t.y-40, '#ff0');
                     t.takeDamage(dmg * 0.5);
-                } else if(this.eq.w.effect === '폭발') {
-                    spawnFloat("💥", t.x, t.y-40, '#f50');
-                    t.takeDamage(dmg * 0.5);
+                } else if(this.eq.w.effect === '화염') {
+                    t.addEffect('burn', 180, this.level);
+                } else if(this.eq.w.effect === '빙결') {
+                    t.addEffect('freeze', 60, 0);
                 }
             }
         }
@@ -370,95 +443,59 @@ class Player extends Entity {
 
     useSkill(key) {
         if(this.skills[key] > 0) return;
-        const j = JOBS[this.job];
-        
         if(this.mp < 20) { log("MP가 부족합니다."); return; }
         this.mp -= 20;
-
-        const cdBase = 300; 
-        this.skills[key] = cdBase;
+        this.skills[key] = 300; // 5s CD
         
-        if(this.job === 0) { 
-            if(key==='q') { 
-                if(this.target) {
-                    this.attack(this.target, 2.5, true);
-                    game.particles.push({type:'shock', x:this.target.x, y:this.target.y, col:'#f00', life:20});
-                }
-            } else if(key==='w') { 
-                game.monsters.forEach(m => {
-                    if(getDist(this, m) < 100) { this.attack(m, 0.8, true); }
-                });
-                game.particles.push({type:'spin', x:this.x, y:this.y, col:'#fa0', life:20});
-            } else if(key==='e') { 
-                this.hp = Math.min(this.maxHp, this.hp + this.maxHp*0.3);
-                spawnFloat("HEAL", this.x, this.y-30, '#0f0');
-                game.particles.push({type:'aura', x:this.x, y:this.y, col:'#0f0', life:30});
-            }
-        } else if(this.job === 1) { 
-            if(key==='q') { 
-                if(this.target) { this.attack(this.target, 0.8, true); setTimeout(()=>this.attack(this.target, 0.8, true), 200); }
-            } else if(key==='w') { 
-                if(this.target) {
-                    for(let i=0; i<5; i++) {
-                        setTimeout(() => {
-                            game.particles.push({type:'proj', x:this.target.x+rand(-50,50), y:this.target.y-100, tx:this.target.x, ty:this.target.y, life:10, col:'#ff0'});
-                            this.attack(this.target, 0.4, true);
-                        }, i*100);
-                    }
-                }
-            } else if(key==='e') { 
-                const ang = this.target ? Math.atan2(this.y-this.target.y, this.x-this.target.x) : 0;
-                this.x += Math.cos(ang)*100; this.y += Math.sin(ang)*100;
-            }
-        } else if(this.job === 2) { 
-            if(key==='q') { 
-                if(this.target) {
-                    game.particles.push({type:'proj', x:this.x, y:this.y, tx:this.target.x, ty:this.target.y, life:30, col:'#f50', size:10});
-                    setTimeout(() => {
-                        this.attack(this.target, 3.0, true);
-                        game.particles.push({type:'shock', x:this.target.x, y:this.target.y, col:'#f50', life:30});
-                    }, 300);
-                }
-            } else if(key==='w') { 
-                 game.monsters.forEach(m => {
-                    if(getDist(this, m) < 200) { this.attack(m, 0.5, true); m.spd = 0.5; }
-                });
-                game.particles.push({type:'aura', x:this.x, y:this.y, col:'#0ff', life:40});
-            } else if(key==='e') { 
-                const ang = Math.random() * Math.PI * 2;
-                this.x += Math.cos(ang)*200; this.y += Math.sin(ang)*200;
-                game.particles.push({type:'shock', x:this.x, y:this.y, col:'#00f', life:20});
-            }
+        const t = this.target;
+
+        if(this.job === 0) { // Warrior
+            if(key==='q' && t) { this.attack(t, 2.5, true); game.particles.push({type:'shock', x:t.x, y:t.y, col:'#f00', life:20}); }
+            else if(key==='w') { game.monsters.forEach(m => { if(getDist(this, m) < 100) this.attack(m, 0.8, true); }); game.particles.push({type:'spin', x:this.x, y:this.y, col:'#fa0', life:20}); }
+            else if(key==='e') { this.hp = Math.min(this.maxHp, this.hp + this.maxHp*0.3); spawnFloat("HEAL", this.x, this.y-30, '#0f0'); game.particles.push({type:'aura', x:this.x, y:this.y, col:'#0f0', life:30}); }
+        } 
+        else if(this.job === 1) { // Archer
+            if(key==='q' && t) { this.attack(t, 0.8, true); setTimeout(()=>this.attack(t, 0.8, true), 200); }
+            else if(key==='w' && t) { for(let i=0; i<5; i++) setTimeout(() => { game.particles.push({type:'proj', x:t.x+rand(-50,50), y:t.y-100, tx:t.x, ty:t.y, life:10, col:'#ff0'}); this.attack(t, 0.4, true); }, i*100); }
+            else if(key==='e') { const ang = t ? Math.atan2(this.y-t.y, this.x-t.x) : 0; this.x += Math.cos(ang)*150; this.y += Math.sin(ang)*150; }
         }
-        // UI Update handled in loop
+        else if(this.job === 2) { // Mage
+            if(key==='q' && t) { game.particles.push({type:'proj', x:this.x, y:this.y, tx:t.x, ty:t.y, life:30, col:'#f50', size:10}); setTimeout(() => { this.attack(t, 3.0, true); game.particles.push({type:'explosion', x:t.x, y:t.y, col:'#f50', life:30}); }, 300); }
+            else if(key==='w') { game.monsters.forEach(m => { if(getDist(this, m) < 200) { this.attack(m, 0.5, true); m.addEffect('freeze', 120, 0); } }); game.particles.push({type:'aura', x:this.x, y:this.y, col:'#0ff', life:40}); }
+            else if(key==='e') { const ang = Math.random() * Math.PI * 2; this.x += Math.cos(ang)*200; this.y += Math.sin(ang)*200; game.particles.push({type:'shock', x:this.x, y:this.y, col:'#00f', life:20}); }
+        }
+        else if(this.job === 3) { // Assassin
+            if(key==='q' && t) { this.x = t.x - 20; this.y = t.y; this.attack(t, 3.0, true); game.particles.push({type:'slash', x:t.x, y:t.y, ang:0, life:10, col:'#505'}); }
+            else if(key==='w' && t) { t.addEffect('poison', 300, this.level*2); spawnFloat("POISON", t.x, t.y-30, '#0f0'); }
+            else if(key==='e') { this.spd += 2; setTimeout(()=>this.spd-=2, 3000); spawnFloat("SPEED UP", this.x, this.y-30, '#fff'); }
+        }
+        else if(this.job === 4) { // Paladin
+            if(key==='q' && t) { this.attack(t, 1.5, true); t.addEffect('stun', 60, 0); game.particles.push({type:'shock', x:t.x, y:t.y, col:'#ff0', life:20}); }
+            else if(key==='w') { this.addEffect('shield', 300, 0); spawnFloat("SHIELD", this.x, this.y-30, '#ff0'); }
+            else if(key==='e') { this.hp = Math.min(this.maxHp, this.hp + this.maxHp*0.2); game.monsters.forEach(m=>{if(getDist(this,m)<150) this.attack(m,1.0,true)}); game.particles.push({type:'aura', x:this.x, y:this.y, col:'#ff0', life:30}); }
+        }
     }
 
-    takeDamage(d) {
-        const real = Math.max(1, d - (this.stats.con*0.5 + (this.eq.a ? this.eq.a.power : 0)));
+    takeDamage(d, ignoreDef=false) {
+        if(this.effects.some(e=>e.type==='shield')) d *= 0.5;
+        const def = ignoreDef ? 0 : (this.stats.con*0.5 + (this.eq.a ? this.eq.a.power + this.eq.a.up*5 : 0));
+        const minDmg = d * 0.2; 
+        const real = Math.max(minDmg, d - def);
+        
         this.hp -= real;
         spawnFloat(Math.floor(real), this.x, this.y-20, '#f00');
         if(this.hp <= 0) {
             log("사망했습니다. 마을에서 부활합니다.", "c-dmg");
-            this.x=1500; this.y=1500; this.hp=this.maxHp; this.mp=this.maxMp;
-            this.dead = false;
+            this.x=2000; this.y=2000; this.hp=this.maxHp; this.mp=this.maxMp;
+            this.dead = false; this.effects = [];
             game.save();
-        }
-    }
-    
-    // Trigger panel update for stat changes
-    upStat(type) {
-        if(this.stats.pt > 0) {
-            this.stats[type]++;
-            this.stats.pt--;
-            if(type === 'con') { this.maxHp += 10; this.hp += 10; }
-            game.ui.updatePanel();
         }
     }
 }
 
 class Monster extends Entity {
     constructor(zone) {
-        let type = 0; // 0:Normal, 1:Elite, 2:Boss
+        let type = 0; 
         if(Math.random() < 0.01) type = 2;
         else if(Math.random() < 0.05) type = 1;
 
@@ -470,7 +507,7 @@ class Monster extends Entity {
         if(type===1) scale *= 2;
         if(type===2) scale *= 5;
 
-        const cols = ['#4f4', '#da4', '#adf', '#f55'];
+        const cols = ['#4f4', '#da4', '#adf', '#f55', '#4d4', '#88f'];
         let col = cols[zone.lv-1];
         if(type===1) col = '#fb0';
         if(type===2) col = '#f00';
@@ -485,29 +522,33 @@ class Monster extends Entity {
         this.exp = 10 * scale;
         this.gold = rand(5, 15) * scale;
         this.spd = 1.5 + (Math.random()*0.5);
+        
+        // Boss Pattern Vars
+        this.patTimer = 0;
+        this.patState = 0;
     }
 
     update(p) {
         if(this.dead) return;
+        this.updateEffects();
+        if(this.effects.some(e => e.type === 'freeze' || e.type === 'stun')) return;
+
         const dist = getDist(this, p);
         
-        // Boss UI
-        if(this.type === 2 && dist < 600) {
-            document.getElementById('boss-ui').style.display = 'block';
-            document.getElementById('boss-fill').style.width = (this.hp/this.maxHp*100)+'%';
+        if(this.type === 2 && dist < 800) {
+            game.activeBoss = this;
+            this.bossBehavior(p, dist);
+            return;
         }
 
         if(dist < 400) {
             if(dist <= this.size+10) {
-                // Attack
                 if(this.anim === 0) {
-                    this.anim = 60; // Attack Cooldown
-                    // Visual Charge for elite/boss
+                    this.anim = 60; 
                     if(this.type > 0) game.particles.push({type:'charge', x:this.x, y:this.y, col:this.col, life:30});
                     setTimeout(() => {
                         if(!this.dead && getDist(this, p) <= this.size+20) {
                             p.takeDamage(this.atk);
-                            // Flashy Hit
                             if(this.type>0) game.particles.push({type:'shock', x:p.x, y:p.y, col:'#f00', life:15});
                         }
                     }, 500);
@@ -521,7 +562,40 @@ class Monster extends Entity {
         if(this.anim > 0) this.anim--;
     }
 
-    takeDamage(d) {
+    bossBehavior(p, dist) {
+        this.patTimer++;
+        if(this.patTimer > 180) { // Every 3 sec
+            this.patTimer = 0;
+            const action = rand(0, 2);
+            
+            if(action === 0) { // AoE
+                game.particles.push({type:'aoe_warn', x:p.x, y:p.y, life:60, size:100});
+                setTimeout(() => {
+                    if(getDist(p, {x:p.x, y:p.y}) < 100) p.takeDamage(this.atk * 1.5); // Logic simplified
+                    game.particles.push({type:'explosion', x:p.x, y:p.y, col:'#f00', life:30, size:100});
+                }, 1000);
+            } else if(action === 1) { // Barrage
+                for(let i=0; i<5; i++) {
+                    setTimeout(() => {
+                        game.particles.push({type:'proj', x:this.x, y:this.y, tx:p.x+rand(-50,50), ty:p.y+rand(-50,50), life:40, col:'#f00', size:8, enemy:true, atk:this.atk});
+                    }, i*100);
+                }
+            } else { // Dash
+                const ang = Math.atan2(p.y - this.y, p.x - this.x);
+                this.x += Math.cos(ang) * 300; this.y += Math.sin(ang) * 300;
+                game.particles.push({type:'slash', x:this.x, y:this.y, ang:ang, life:20, col:'#fff'});
+                if(getDist(this, p) < 50) p.takeDamage(this.atk);
+            }
+        }
+        // Basic Chase
+        if(dist > 50) {
+            const ang = Math.atan2(p.y - this.y, p.x - this.x);
+            this.x += Math.cos(ang) * (this.spd * 0.5);
+            this.y += Math.sin(ang) * (this.spd * 0.5);
+        }
+    }
+
+    takeDamage(d, ignoreDef=false) {
         this.hp -= d;
         if(this.hp <= 0) {
             this.dead = true;
@@ -533,7 +607,10 @@ class Monster extends Entity {
                 spawnFloat("LEVEL UP", this.x, this.y-40, '#ff0');
                 game.ui.updatePanel();
             }
-            if(this.type===2) document.getElementById('boss-ui').style.display = 'none';
+            if(this.type===2 && game.activeBoss === this) {
+                document.getElementById('boss-ui').style.display = 'none';
+                game.activeBoss = null;
+            }
             this.drop();
         }
     }
@@ -560,6 +637,7 @@ class Game {
         this.particles = [];
         this.cam = { x:0, y:0 };
         this.frame = 0;
+        this.activeBoss = null;
         
         this.ui = new UI(this);
         this.smith = new Smith(this);
@@ -568,15 +646,12 @@ class Game {
     }
 
     init() {
-        // Input
         CANVAS.addEventListener('mousedown', e => {
             const r = CANVAS.getBoundingClientRect();
             const wx = e.clientX - r.left + this.cam.x;
             const wy = e.clientY - r.top + this.cam.y;
             
-            // Check Mob Click
             let t = null;
-            // Reverse loop to click top mob
             for(let i=this.monsters.length-1; i>=0; i--) {
                 const m = this.monsters[i];
                 if(!m.dead && getDist({x:wx, y:wy}, m) < m.size+15) { t = m; break; }
@@ -585,13 +660,17 @@ class Game {
             if(t) {
                 this.player.target = t;
                 this.player.dest = null;
-                // Highlight
                 game.particles.push({type:'shock', x:t.x, y:t.y, col:'#f00', life:10, size:30});
             } else {
-                this.player.target = null;
+                // V9: Click ground moves but keeps target
                 this.player.dest = {x:wx, y:wy};
                 game.particles.push({type:'shock', x:wx, y:wy, col:'#0f0', life:10, size:10});
             }
+        });
+        
+        // Double click to clear target
+        CANVAS.addEventListener('dblclick', e => {
+            this.player.target = null;
         });
 
         window.addEventListener('keydown', e => {
@@ -603,6 +682,7 @@ class Game {
                     spawnFloat("HP UP", this.player.x, this.player.y-30, '#0f0');
                 }
             }
+            if(e.key === 'Escape') this.player.target = null;
         });
 
         window.addEventListener('resize', () => {
@@ -611,13 +691,13 @@ class Game {
         });
         CANVAS.width = SCREEN_W; CANVAS.height = SCREEN_H;
 
-        // Auto Load
-        if(localStorage.getItem('rpg_v5')) {
+        if(localStorage.getItem('rpg_v8') || localStorage.getItem('rpg_v7')) {
             this.load();
             document.getElementById('job-select').style.display = 'none';
         }
         
-        this.ui.updatePanel(); // Initial Panel Update
+        this.ui.updatePanel();
+        this.ui.updateIcons();
 
         this.loop = this.loop.bind(this);
         requestAnimationFrame(this.loop);
@@ -629,38 +709,52 @@ class Game {
         this.player.maxMp *= JOBS[id].mp; this.player.mp = this.player.maxMp;
         document.getElementById('job-select').style.display = 'none';
         this.ui.updatePanel();
+        this.ui.updateIcons();
         log(`${JOBS[id].n}로 모험을 시작합니다.`);
     }
 
     loop() {
         this.frame++;
         
-        // Spawning (High Density)
         this.monsters = this.monsters.filter(m => !m.dead);
-        if(this.monsters.length < 150) { 
+        if(this.monsters.length < 90) { 
             const z = ZONES[rand(0, ZONES.length-1)];
-            this.monsters.push(new Monster(z));
+            const mx = rand(z.x, z.x+z.w);
+            const my = rand(z.y, z.y+z.h);
+            let safe = false;
+            for(let t of TOWNS) { if(getDist({x:mx, y:my}, t) < t.r + 100) safe = true; }
+            if(!safe) {
+                const m = new Monster(z); m.x = mx; m.y = my;
+                this.monsters.push(m);
+            }
         }
 
+        this.activeBoss = null;
         this.player.update();
         this.monsters.forEach(m => m.update(this.player));
 
-        // Camera
+        // Boss UI
+        const bossUi = document.getElementById('boss-ui');
+        if(this.activeBoss && !this.activeBoss.dead) {
+            bossUi.style.display = 'block';
+            document.getElementById('boss-name').innerText = this.activeBoss.name;
+            document.getElementById('boss-fill').style.width = (this.activeBoss.hp / this.activeBoss.maxHp * 100) + '%';
+        } else {
+            bossUi.style.display = 'none';
+        }
+
         this.cam.x = clamp(this.player.x - SCREEN_W/2, 0, WORLD_W - SCREEN_W);
         this.cam.y = clamp(this.player.y - SCREEN_H/2, 0, WORLD_H - SCREEN_H);
 
-        // Render
         const ctx = CTX;
         ctx.fillStyle = '#111'; ctx.fillRect(0,0,SCREEN_W,SCREEN_H);
 
-        // Zones
         ZONES.forEach(z => {
             if(z.x+z.w > this.cam.x && z.x < this.cam.x+SCREEN_W && z.y+z.h > this.cam.y && z.y < this.cam.y+SCREEN_H) {
                 ctx.fillStyle = z.color; ctx.fillRect(z.x - this.cam.x, z.y - this.cam.y, z.w, z.h);
             }
         });
         
-        // Towns
         TOWNS.forEach(t => {
              if(t.x+t.r > this.cam.x && t.x-t.r < this.cam.x+SCREEN_W) {
                  ctx.fillStyle = 'rgba(0,0,0,0.5)';
@@ -673,68 +767,46 @@ class Game {
         this.monsters.forEach(m => m.draw(ctx, this.cam));
         this.player.draw(ctx, this.cam);
 
-        // Weapon Animation
-        if(this.player.atkAnim > 0) {
-            ctx.save();
-            ctx.translate(this.player.x - this.cam.x, this.player.y - this.cam.y);
-            let ang = 0;
-            if(this.player.target) ang = Math.atan2(this.player.target.y - this.player.y, this.player.target.x - this.player.x);
-            else if(this.player.dest) ang = Math.atan2(this.player.dest.y - this.player.y, this.player.dest.x - this.player.x);
-            
-            ctx.rotate(ang + (this.player.atkAnim/15)); // Swing effect
-            
-            ctx.fillStyle = this.player.eq.w ? RARITY[this.player.eq.w.rarity].c : '#ccc';
-            ctx.shadowBlur = this.player.eq.w && this.player.eq.w.rarity >= 4 ? 10 : 0;
-            ctx.shadowColor = ctx.fillStyle;
-            ctx.fillRect(10, -2, 30, 4); 
-            ctx.restore();
-        }
-
-        // Particles
         this.particles = this.particles.filter(p => p.life > 0);
         this.particles.forEach(p => {
             p.update && p.update();
             if(p.type === 'text') p.draw(ctx, this.cam);
-            else if(p.type === 'swing') {
-                ctx.strokeStyle = p.col; ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.arc(p.x-this.cam.x, p.y-this.cam.y, 40, p.ang-1, p.ang+1);
-                ctx.stroke();
-                p.life--;
-            } else if(p.type === 'proj') {
+            else if(p.type === 'slash') {
+                ctx.save(); ctx.translate(p.x-this.cam.x, p.y-this.cam.y); ctx.rotate(p.ang);
+                ctx.fillStyle = p.col; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(60, -20); ctx.lineTo(60, 20); ctx.fill();
+                ctx.restore(); p.life--;
+            }
+            else if(p.type === 'proj') {
                 p.x += (p.tx - p.x) * 0.2; p.y += (p.ty - p.y) * 0.2;
                 ctx.fillStyle = p.col; ctx.beginPath(); ctx.arc(p.x-this.cam.x, p.y-this.cam.y, p.size||5, 0, Math.PI*2); ctx.fill();
+                // Enemy Proj Collision
+                if(p.enemy && getDist(p, this.player) < 20) { this.player.takeDamage(p.atk); p.life=0; }
                 p.life--;
-            } else if(p.type === 'shock') {
-                ctx.strokeStyle = p.col; ctx.beginPath(); 
-                ctx.arc(p.x-this.cam.x, p.y-this.cam.y, (20-p.life)*2, 0, Math.PI*2); ctx.stroke();
-                p.life--;
-            } else if(p.type === 'spin') {
-                 ctx.strokeStyle = p.col; ctx.lineWidth=3; ctx.beginPath();
-                 ctx.arc(p.x-this.cam.x, p.y-this.cam.y, 60, 0, Math.PI*2); ctx.stroke();
+            }
+            else if(p.type === 'explosion') {
+                ctx.fillStyle = p.col; ctx.globalAlpha = p.life/30;
+                ctx.beginPath(); ctx.arc(p.x-this.cam.x, p.y-this.cam.y, p.size||50, 0, Math.PI*2); ctx.fill();
+                ctx.globalAlpha = 1.0; p.life--;
+            }
+            else if(p.type === 'aoe_warn') {
+                 ctx.strokeStyle = '#f00'; ctx.lineWidth = 2; ctx.globalAlpha = 0.5;
+                 ctx.beginPath(); ctx.arc(p.x-this.cam.x, p.y-this.cam.y, p.size, 0, Math.PI*2); ctx.stroke();
+                 ctx.fillStyle = 'rgba(255,0,0,0.2)'; ctx.fill(); ctx.globalAlpha = 1.0;
                  p.life--;
-            } else if(p.type === 'aura') {
-                 ctx.fillStyle = p.col; ctx.globalAlpha = p.life/30;
-                 ctx.beginPath(); ctx.arc(p.x-this.cam.x, p.y-this.cam.y, 40, 0, Math.PI*2); ctx.fill();
-                 ctx.globalAlpha = 1.0; p.life--;
-            } else if(p.type === 'charge') {
-                 ctx.strokeStyle = p.col; ctx.beginPath();
-                 ctx.moveTo(p.x-this.cam.x + rand(-20,20), p.y-this.cam.y + rand(-20,20));
-                 ctx.lineTo(p.x-this.cam.x, p.y-this.cam.y); ctx.stroke();
-                 p.life--;
+            }
+            else if(p.type === 'shock' || p.type === 'spin' || p.type === 'aura') {
+                // ... (Existing particle logic)
+                ctx.strokeStyle = p.col; ctx.beginPath(); ctx.arc(p.x-this.cam.x, p.y-this.cam.y, (30-p.life)*2, 0, Math.PI*2); ctx.stroke(); p.life--;
             }
         });
 
-        // Target Ring
         if(this.player.target && !this.player.target.dead) {
             const t = this.player.target;
             ctx.strokeStyle = '#f00'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(t.x-this.cam.x, t.y-this.cam.y, t.size+10, 0, Math.PI*2); ctx.stroke();
         }
 
-        // Save Timer
         if(this.frame % 3600 === 0) this.save();
 
-        // **KEY FIX**: Update HUD every frame for smooth bars/cooldowns
         this.ui.updateHUD();
 
         requestAnimationFrame(this.loop);
@@ -742,26 +814,28 @@ class Game {
 
     save() {
         const d = { p: this.player, ts: Date.now() };
-        localStorage.setItem('rpg_v5', JSON.stringify(d));
+        localStorage.setItem('rpg_v8', JSON.stringify(d)); // Keep V8 key for compatibility
     }
 
     load() {
         try {
-            const d = JSON.parse(localStorage.getItem('rpg_v5'));
-            Object.assign(this.player, d.p);
-            this.player.inv = this.player.inv.map(i => { const n=new Item(1); Object.assign(n,i); return n; });
-            if(this.player.eq.w) { const n=new Item(1); Object.assign(n,this.player.eq.w); this.player.eq.w=n; }
-            if(this.player.eq.a) { const n=new Item(1); Object.assign(n,this.player.eq.a); this.player.eq.a=n; }
-            this.ui.updatePanel();
-            log("데이터 로드 완료.");
+            let json = localStorage.getItem('rpg_v8') || localStorage.getItem('rpg_v7');
+            if(json) {
+                const d = JSON.parse(json);
+                Object.assign(this.player, d.p);
+                this.player.inv = this.player.inv.map(i => { const n=new Item(1); Object.assign(n,i); return n; });
+                if(this.player.eq.w) { const n=new Item(1); Object.assign(n,this.player.eq.w); this.player.eq.w=n; }
+                if(this.player.eq.a) { const n=new Item(1); Object.assign(n,this.player.eq.a); this.player.eq.a=n; }
+                this.ui.updatePanel();
+                log("데이터 로드 완료.");
+            }
         } catch(e) { console.error(e); }
     }
 }
 
 class UI {
-    constructor(g) { this.g = g; }
+    constructor(g) { this.g = g; this.panelOpen = true; }
 
-    // Fast updates (every frame)
     updateHUD() {
         const p = this.g.player;
         document.getElementById('u-lv').innerText = p.level;
@@ -772,7 +846,6 @@ class UI {
         document.getElementById('mp-bar').style.width = (p.mp/p.maxMp*100)+'%';
         document.getElementById('exp-bar').style.width = (p.exp/p.maxExp*100)+'%';
 
-        // Skill CD
         ['q','w','e'].forEach(k => {
             const el = document.getElementById(`cd-${k}`);
             if(p.skills[k] > 0) {
@@ -782,8 +855,15 @@ class UI {
         });
     }
 
-    // Heavy updates (events only)
+    updateIcons() {
+        const j = JOBS[this.g.player.job];
+        document.querySelector('#slot-q .icon').innerText = j.icons[0];
+        document.querySelector('#slot-w .icon').innerText = j.icons[1];
+        document.querySelector('#slot-e .icon').innerText = j.icons[2];
+    }
+
     updatePanel() {
+        if(!this.panelOpen) return;
         const p = this.g.player;
         document.getElementById('u-job').innerText = JOBS[p.job].n;
         document.getElementById('st-atk').innerText = Math.floor(p.stats.str*2 + (p.eq.w?p.eq.w.power+p.eq.w.up*5:0));
@@ -791,7 +871,6 @@ class UI {
         document.getElementById('st-pt').innerText = p.stats.pt;
         document.getElementById('inv-cnt').innerText = p.inv.length;
 
-        // Equip
         const setEq = (id, it, type) => {
             const el = document.getElementById(id);
             el.innerHTML = it ? `<span style="color:${RARITY[it.rarity].c}">${it.name}</span>` : (type==='w'?'무기':'갑옷');
@@ -800,7 +879,6 @@ class UI {
         };
         setEq('eq-w', p.eq.w, 'w'); setEq('eq-a', p.eq.a, 'a');
 
-        // Inv
         const grid = document.getElementById('inv-grid');
         grid.innerHTML = '';
         p.inv.forEach((it, i) => {
@@ -808,9 +886,12 @@ class UI {
             d.className = `slot ${RARITY[it.rarity].cl}`;
             d.innerHTML = it.type==='s' ? '각인석' : it.name;
             if(it.up > 0) d.innerHTML += ` (+${it.up})`;
+            if(it.engrave) d.innerHTML += ` <span style='color:#0ff'>★</span>`;
+            
             d.onclick = () => {
                 if(document.getElementById('smith-modal').style.display==='block') {
-                    game.smith.sel(it, i);
+                    if(it.type === 's') game.smith.selStone(it, i);
+                    else game.smith.sel(it, i);
                 } else if(it.type !== 's') {
                     if(it.type==='w') { if(p.eq.w) p.inv.push(p.eq.w); p.eq.w=it; }
                     else { if(p.eq.a) p.inv.push(p.eq.a); p.eq.a=it; }
@@ -821,6 +902,21 @@ class UI {
             d.oncontextmenu = (e) => { e.preventDefault(); if(document.getElementById('shop-modal').style.display==='block') { p.gold+=it.price; p.inv.splice(i,1); this.updatePanel(); } };
             grid.appendChild(d);
         });
+    }
+
+    togglePanel() {
+        this.panelOpen = !this.panelOpen;
+        const content = document.getElementById('panel-content');
+        if(this.panelOpen) {
+            content.style.opacity = '1';
+            content.style.pointerEvents = 'auto';
+            setTimeout(() => content.style.display = 'block', 0);
+            this.updatePanel();
+        } else {
+            content.style.opacity = '0';
+            content.style.pointerEvents = 'none';
+            setTimeout(() => content.style.display = 'none', 200);
+        }
     }
 
     toggleShop() {
@@ -851,15 +947,31 @@ class UI {
 }
 
 class Smith {
-    constructor(g) { this.g = g; this.item = null; this.idx = -1; }
+    constructor(g) { this.g = g; this.item = null; this.iIdx = -1; this.stone = null; this.sIdx = -1; }
+    
     sel(it, i) {
-        if(it.type === 's') return;
-        this.item = it; this.idx = i;
-        const el = document.getElementById('smith-slot');
-        el.className = `slot ${RARITY[it.rarity].cl}`;
-        el.innerHTML = it.name;
+        this.item = it; this.iIdx = i;
+        const el1 = document.getElementById('smith-slot'); el1.className = `slot ${RARITY[it.rarity].cl}`; el1.innerHTML = it.name;
+        const el2 = document.getElementById('smith-en-item'); el2.className = `slot ${RARITY[it.rarity].cl}`; el2.innerHTML = it.name;
     }
-    clear() { this.item=null; document.getElementById('smith-slot').innerHTML='선택'; document.getElementById('smith-slot').className='slot'; }
+    
+    selStone(it, i) {
+        this.stone = it; this.sIdx = i;
+        const el = document.getElementById('smith-en-stone'); el.className = `slot ${RARITY[it.rarity].cl}`; el.innerHTML = "각인석";
+    }
+
+    clear(t) {
+        if(t==='up' || t==='enItem') { 
+            this.item=null; 
+            document.getElementById('smith-slot').className='slot'; document.getElementById('smith-slot').innerHTML='선택';
+            document.getElementById('smith-en-item').className='slot'; document.getElementById('smith-en-item').innerHTML='장비';
+        }
+        if(t==='enStone') {
+            this.stone=null;
+            document.getElementById('smith-en-stone').className='slot'; document.getElementById('smith-en-stone').innerHTML='각인석';
+        }
+    }
+
     upgrade() {
         if(!this.item) return;
         const p = this.g.player;
@@ -869,7 +981,22 @@ class Smith {
             this.item.up++; this.item.power += 5; log("강화 성공!", "c-get");
         } else log("강화 실패...", "c-dmg");
         this.g.ui.updatePanel();
-        this.sel(this.item, this.idx);
+        this.sel(this.item, this.iIdx);
+    }
+
+    engrave() {
+        if(!this.item || !this.stone) { log("장비와 각인석이 필요합니다."); return; }
+        const p = this.g.player;
+        if(p.gold < 500) { log("골드 부족"); return; }
+        p.gold -= 500;
+        p.inv.splice(this.sIdx, 1);
+        const eff = ENGRAVES[rand(0, ENGRAVES.length-1)];
+        this.item.engrave = eff;
+        log(`각인 성공: [${eff.n}]`, "c-rare");
+        spawnFloat("ENGRAVE!", p.x, p.y-50, '#0ff');
+        this.stone = null; this.sIdx = -1;
+        document.getElementById('smith-en-stone').className='slot'; document.getElementById('smith-en-stone').innerHTML='각인석';
+        this.g.ui.updatePanel();
     }
 }
 
