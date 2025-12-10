@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>RPG V11: The Endless World</title>
+    <title>RPG V13: Perfection</title>
     <style>
         /* CSS Styles */
         body { margin: 0; overflow: hidden; background: #050505; color: #ccc; font-family: 'Segoe UI', sans-serif; user-select: none; }
@@ -31,9 +31,9 @@
         /* Skill Bar */
         #skill-bar { bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; }
         .skill-slot { width: 50px; height: 50px; background: #151515; border: 2px solid #444; position: relative; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; color: #888; flex-direction: column; }
-        .skill-name { font-size: 10px; color: #aaa; margin-top: 2px; }
         .skill-cd { position: absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; color:#f55; font-size:18px; font-weight:bold; display:none; border: 1px solid #800; }
         .key-hint { position: absolute; top:2px; left:3px; font-size: 10px; color: #666; font-family: monospace; }
+        .pot-count { position: absolute; bottom: 2px; right: 4px; font-size: 12px; color: #fff; font-weight: bold; text-shadow: 1px 1px 0 #000; }
 
         /* Right Panel */
         #panel { top: 50px; right: 10px; width: 280px; max-height: 85vh; display: flex; flex-direction: column; }
@@ -104,7 +104,7 @@
         <div class="skill-slot" id="slot-q"><span class="key-hint">Q</span><span class="icon">Skill 1</span><div class="skill-cd" id="cd-q"></div></div>
         <div class="skill-slot" id="slot-w"><span class="key-hint">W</span><span class="icon">Skill 2</span><div class="skill-cd" id="cd-w"></div></div>
         <div class="skill-slot" id="slot-e"><span class="key-hint">E</span><span class="icon">Skill 3</span><div class="skill-cd" id="cd-e"></div></div>
-        <div class="skill-slot" style="border-color:#633"><span class="key-hint">P</span>POTION<span style="position:absolute; bottom:2px; right:4px; font-size:10px; color:#fff;" id="u-pot">0</span></div>
+        <div class="skill-slot" style="border-color:#633"><span class="key-hint">P</span>POTION<span class="pot-count" id="u-pot">0</span></div>
     </div>
 
     <!-- Right Panel -->
@@ -191,12 +191,12 @@ let SCREEN_H = window.innerHeight;
 const WORLD_W = 12000;
 const WORLD_H = 12000;
 
-// Zones (V11 Expanded)
+// Zones (V13 Expanded & Fixed)
 const ZONES = [
     { name: "평화의 숲", color: "#1a2b1a", x: 0, y: 0, w: 4000, h: 4000, lv: 1 },
     { name: "황무지", color: "#3d3018", x: 4000, y: 0, w: 4000, h: 4000, lv: 2 },
     { name: "설원", color: "#15202b", x: 0, y: 4000, w: 4000, h: 4000, lv: 3 },
-    { name: "지옥", color: "#220505", x: 4000, y: 4000, w: 4000, h: 4000, lv: 4 },
+    { name: "지옥", color: "#220505", x: 3000, y: 4000, w: 3000, h: 4000, lv: 4 },
     { name: "맹독의 늪", color: "#1a2205", x: 8000, y: 0, w: 4000, h: 4000, lv: 5 },
     { name: "천공의 섬", color: "#445566", x: 8000, y: 4000, w: 4000, h: 4000, lv: 6 },
     { name: "저주받은 묘지", color: "#111115", x: 0, y: 8000, w: 6000, h: 4000, lv: 7 },
@@ -214,15 +214,25 @@ const TOWNS = [
     { name: "수정 광산", x: 9000, y: 10000, r: 300 }
 ];
 
-// V11 Balance: Lower drop rate, higher stats
+const BOSS_SPOTS = [
+    { name: "숲의 수호자", x: 3500, y: 3500, lv: 1, type: 2 },
+    { name: "샌드 웜", x: 7500, y: 3500, lv: 2, type: 2 },
+    { name: "예티 킹", x: 500, y: 7500, lv: 3, type: 2 },
+    { name: "발록", x: 4500, y: 7500, lv: 4, type: 2 },
+    { name: "히드라", x: 11500, y: 500, lv: 5, type: 2 },
+    { name: "스카이 드래곤", x: 11500, y: 7500, lv: 6, type: 2 },
+    { name: "리치 킹", x: 500, y: 11500, lv: 7, type: 2 },
+    { name: "크리스탈 가디언", x: 11500, y: 11500, lv: 8, type: 2 }
+];
+
 const RARITY = [
     { n: '일반', c: '#888', cl: 'r-0', m: 1.0 },
     { n: '고급', c: '#4f4', cl: 'r-1', m: 1.5 },
     { n: '희귀', c: '#4af', cl: 'r-2', m: 2.5 },
     { n: '영웅', c: '#d4f', cl: 'r-3', m: 4.0 },
-    { n: '전설', c: '#fa0', cl: 'r-4', m: 8.0 },  // Buffed from 4.0
-    { n: '신화', c: '#f22', cl: 'r-5', m: 15.0 }, // Buffed from 7.0
-    { n: '태고', c: '#0ff', cl: 'r-6', m: 30.0 }  // Buffed from 12.0
+    { n: '전설', c: '#fa0', cl: 'r-4', m: 8.0 }, 
+    { n: '신화', c: '#f22', cl: 'r-5', m: 15.0 },
+    { n: '태고', c: '#0ff', cl: 'r-6', m: 30.0 }
 ];
 
 const ENGRAVES = [
@@ -253,12 +263,18 @@ function log(msg, type='c-sys') {
 function spawnFloat(txt, x, y, col) {
     game.particles.push({
         type: 'text', txt: txt, x: x, y: y, col: col, life: 60,
-        update: function() { this.y -= 0.5; this.life--; },
+        update: function(dt) { this.y -= 30 * dt; this.life -= 60 * dt; },
         draw: function(ctx, cam) {
             ctx.fillStyle = this.col; ctx.font = "bold 12px sans-serif";
             ctx.fillText(this.txt, this.x - cam.x, this.y - cam.y);
         }
     });
+}
+function getZoneName(x, y) {
+    for(let z of ZONES) {
+        if(x >= z.x && x < z.x + z.w && y >= z.y && y < z.y + z.h) return z.name;
+    }
+    return "위험 지대";
 }
 
 /**
@@ -270,15 +286,10 @@ class Item {
         this.type = type || (Math.random()<0.5 ? 'w' : 'a');
         if(type === 's') { this.name = "각인석"; this.rarity = 2; this.price = 200; return; }
         
-        // V11: Lower drop rates for high tiers
         const r = Math.random();
         let ri = 0;
-        if(r < 0.0001) ri = 6;      // 0.01%
-        else if(r < 0.0005) ri = 5; // 0.05%
-        else if(r < 0.002) ri = 4;  // 0.2%
-        else if(r < 0.02) ri = 3;   // 2%
-        else if(r < 0.1) ri = 2;    // 10%
-        else if(r < 0.4) ri = 1;    // 40%
+        if(r < 0.0001) ri = 6; else if(r < 0.0005) ri = 5; else if(r < 0.002) ri = 4;
+        else if(r < 0.02) ri = 3; else if(r < 0.1) ri = 2; else if(r < 0.4) ri = 1;
 
         const info = RARITY[ri];
         this.rarity = ri;
@@ -288,7 +299,6 @@ class Item {
         this.name = `${info.n} ${this.type==='w'?'검':'갑옷'}`;
         this.price = Math.floor(this.power * 5);
 
-        // V11: More Effects
         if(ri >= 4) {
             const effects = ['번개', '화염', '빙결', '메테오', '체인'];
             this.effect = effects[rand(0,4)];
@@ -317,16 +327,17 @@ class Entity {
         ctx.fillStyle = (this.hp/this.maxHp)>0.5 ? '#0f0' : '#f00';
         ctx.fillRect(rx, ry, 30 * (this.hp/this.maxHp), 4);
     }
-    updateEffects() {
+    updateEffects(dt) {
         if(this.dead) return;
         this.effects = this.effects.filter(e => e.time > 0);
         this.effects.forEach(e => {
-            e.time--;
-            if(e.type === 'poison' && e.time % 60 === 0) { this.takeDamage(e.val, true); spawnFloat("독", this.x, this.y-30, '#0f0'); }
-            if(e.type === 'burn' && e.time % 30 === 0) { this.takeDamage(e.val, true); spawnFloat("화상", this.x, this.y-30, '#f50'); }
+            e.time -= dt * 60;
+            e.tick -= dt * 60;
+            if(e.type === 'poison' && e.tick <= 0) { this.takeDamage(e.val, true); spawnFloat("독", this.x, this.y-30, '#0f0'); e.tick = 60; }
+            if(e.type === 'burn' && e.tick <= 0) { this.takeDamage(e.val, true); spawnFloat("화상", this.x, this.y-30, '#f50'); e.tick = 30; }
         });
     }
-    addEffect(type, time, val) { this.effects.push({type, time, val}); }
+    addEffect(type, time, val) { this.effects.push({type, time, val, tick:0}); }
 }
 
 class Player extends Entity {
@@ -343,18 +354,22 @@ class Player extends Entity {
         this.skills = { q:0, w:0, e:0 }; 
         this.spd = 4;
         this.atkAnim = 0;
+        this.regenTimer = 0;
     }
 
-    update() {
+    update(dt) {
         if(this.dead) return;
-        this.updateEffects();
-        if(game.frame % 60 === 0) {
+        this.updateEffects(dt);
+        
+        this.regenTimer += dt;
+        if(this.regenTimer >= 1.0) { 
             this.hp = Math.min(this.maxHp, this.hp + this.stats.con*0.2);
             this.mp = Math.min(this.maxMp, this.mp + 2);
+            this.regenTimer = 0;
         }
-        for(let k in this.skills) if(this.skills[k]>0) this.skills[k]--;
+        
+        for(let k in this.skills) if(this.skills[k]>0) this.skills[k] -= dt * 60;
 
-        // V11: Improved Targeting Logic (Sticky Target)
         if(this.target) {
             if(this.target.dead) {
                 this.target = null;
@@ -362,22 +377,15 @@ class Player extends Entity {
                 const range = JOBS[this.job].range;
                 const dist = getDist(this, this.target);
                 
-                // If manual move destination exists, prioritize it (kiting)
                 if(this.dest) {
-                    this.moveTo(this.dest.x, this.dest.y);
+                    this.moveTo(this.dest.x, this.dest.y, dt);
                     if(getDist(this, this.dest) < 5) this.dest = null;
                 } 
-                // Auto-chase if no manual move
                 else if(dist > range) {
-                    this.moveTo(this.target.x, this.target.y);
+                    this.moveTo(this.target.x, this.target.y, dt);
                 }
 
-                // Attack if in range
                 if(dist <= range) {
-                    // Stop moving to attack
-                    if(!this.dest) {
-                        // Face target
-                    }
                     if(Date.now() - this.lastAtk > Math.max(200, 1000 - this.stats.dex*10)) {
                         this.attack(this.target);
                     }
@@ -385,17 +393,18 @@ class Player extends Entity {
             }
         } else if(this.dest) {
             if(getDist(this, this.dest) < 5) this.dest = null;
-            else this.moveTo(this.dest.x, this.dest.y);
+            else this.moveTo(this.dest.x, this.dest.y, dt);
         }
 
-        if(this.atkAnim > 0) this.atkAnim--;
+        if(this.atkAnim > 0) this.atkAnim -= dt * 60;
     }
 
-    moveTo(tx, ty) {
+    moveTo(tx, ty, dt) {
         if(this.effects.some(e => e.type === 'freeze')) return;
         const rad = Math.atan2(ty - this.y, tx - this.x);
-        this.x += Math.cos(rad) * this.spd;
-        this.y += Math.sin(rad) * this.spd;
+        const moveStep = this.spd * 60 * dt;
+        this.x += Math.cos(rad) * moveStep;
+        this.y += Math.sin(rad) * moveStep;
         this.x = clamp(this.x, 0, WORLD_W); this.y = clamp(this.y, 0, WORLD_H);
     }
 
@@ -426,10 +435,8 @@ class Player extends Entity {
 
         const ang = Math.atan2(t.y - this.y, t.x - this.x);
         
-        // V11: Slash only for Melee
         if(!isSkill) {
             if(this.job === 0 || this.job === 3 || this.job === 4) {
-                // Melee Slash - Positioned between player and target
                 const sx = this.x + Math.cos(ang) * 30;
                 const sy = this.y + Math.sin(ang) * 30;
                 game.particles.push({
@@ -437,7 +444,6 @@ class Player extends Entity {
                     col: this.eq.w && this.eq.w.rarity >= 4 ? '#0ff' : '#fff'
                 });
             } else {
-                // Ranged Projectile
                 game.particles.push({
                     type: 'proj', x: this.x, y: this.y, tx: t.x, ty: t.y, life: 20,
                     col: this.job===1 ? '#ff0' : '#0af'
@@ -447,7 +453,6 @@ class Player extends Entity {
 
         spawnFloat(dmg, t.x, t.y-20, isCrit?'#ff0':'#fff');
         
-        // V11: New Item Effects
         if(this.eq.w && this.eq.w.effect) {
             if(Math.random() < 0.25) {
                 const eff = this.eq.w.effect;
@@ -509,20 +514,28 @@ class Player extends Entity {
         }
     }
 
+    // V13: Fixed Damage Formula (Min 20% guaranteed)
     takeDamage(d, ignoreDef=false) {
         if(this.effects.some(e=>e.type==='shield')) d *= 0.5;
-        // Engrave Dodge
         if(this.eq.w && this.eq.w.engrave && this.eq.w.engrave.id === 'dodge' && Math.random() < 0.2) {
             spawnFloat("MISS", this.x, this.y-30, '#888');
             return;
         }
 
         const def = ignoreDef ? 0 : (this.stats.con*0.5 + (this.eq.a ? this.eq.a.power + this.eq.a.up*5 : 0));
-        const minDmg = d * 0.2; 
-        const real = Math.max(minDmg, d - def);
         
-        this.hp -= real;
-        spawnFloat(Math.floor(real), this.x, this.y-20, '#f00');
+        // V13: Logic Change - Minimum damage is 20% of incoming damage, or raw difference, whichever is higher
+        // This prevents high defense from making you invincible (1 dmg) and fixes healing bug
+        const minDmg = d * 0.2; 
+        const calcDmg = d - def;
+        const real = Math.max(minDmg, calcDmg);
+        
+        // Final sanity check to ensure at least 1 damage if d > 0
+        const finalDmg = Math.max(1, Math.floor(real));
+
+        this.hp -= finalDmg;
+        spawnFloat(finalDmg, this.x, this.y-20, '#f00');
+        
         if(this.hp <= 0) {
             log("사망했습니다.", "c-dmg");
             this.x=2000; this.y=2000; this.hp=this.maxHp; this.mp=this.maxMp;
@@ -533,19 +546,17 @@ class Player extends Entity {
 }
 
 class Monster extends Entity {
-    constructor(zone) {
+    constructor(zone, isBossInfo) {
         let type = 0; 
-        if(Math.random() < 0.01) type = 2;
+        if(isBossInfo) type = 2;
         else if(Math.random() < 0.05) type = 1;
 
         let x, y;
-        if(type===2) { x=zone.x+zone.w/2; y=zone.y+zone.h/2; }
+        if(type===2) { x=isBossInfo.x; y=isBossInfo.y; }
         else { x=rand(zone.x, zone.x+zone.w); y=rand(zone.y, zone.y+zone.h); }
 
         let scale = zone.lv;
-        if(type===1) scale *= 2;
-        if(type===2) scale *= 5;
-
+        
         const cols = ['#4f4', '#da4', '#adf', '#f55', '#4d4', '#88f', '#666', '#a4a'];
         let col = cols[zone.lv-1];
         if(type===1) col = '#fb0';
@@ -553,55 +564,82 @@ class Monster extends Entity {
 
         super(x, y, 20 + scale*4, col);
         this.type = type;
-        this.name = type===2 ? `[BOSS] ${zone.name} 주인` : (type===1 ? `[Elite] ${zone.name} 수호자` : '몬스터');
-        this.level = scale * 5;
-        this.maxHp = 50 * scale * scale;
-        this.hp = this.maxHp;
-        this.atk = 5 * scale;
-        this.exp = 10 * scale;
-        this.gold = rand(5, 15) * scale;
-        this.spd = 1.5 + (Math.random()*0.5);
         
+        if(type === 2) {
+            this.name = `[BOSS] ${isBossInfo.name}`;
+            this.level = isBossInfo.lv * 10;
+            this.maxHp = 500 * scale * scale; 
+            this.atk = 5 * scale * 25; // V13: Boss Atk Buffed to pierce Def
+            this.size = 60;
+        } else {
+            this.name = type===1 ? `[Elite] ${zone.name} 수호자` : '몬스터';
+            this.level = scale * 5;
+            this.maxHp = 50 * scale * scale;
+            this.atk = 5 * scale * 4; // V13: Normal Atk Buffed
+            
+            if(type === 1) { 
+                this.maxHp *= 3;
+                this.atk *= 1; 
+                this.size = 40;
+            }
+        }
+        
+        this.hp = this.maxHp;
+        this.exp = 10 * scale * (type+1);
+        this.gold = rand(5, 15) * scale * (type+1);
+        this.spd = 1.5 + (Math.random()*0.5);
         this.patTimer = 0;
+        this.bossInfo = isBossInfo;
+        this.anim = 0; // Attack Cooldown
     }
 
-    update(p) {
+    update(p, dt) {
         if(this.dead) return;
-        this.updateEffects();
+        this.updateEffects(dt);
         if(this.effects.some(e => e.type === 'freeze' || e.type === 'stun')) return;
 
         const dist = getDist(this, p);
         
         if(this.type === 2 && dist < 800) {
             game.activeBoss = this;
-            this.bossBehavior(p, dist);
+            this.bossBehavior(p, dist, dt);
             return;
         }
 
         if(dist < 400) {
-            if(dist <= this.size+10) {
-                if(this.anim === 0) {
-                    this.anim = 60; 
+            // V13: Improved Attack Logic
+            // If close enough
+            if(dist <= this.size + 30) {
+                // If cooldown ready
+                if(this.anim <= 0) {
+                    this.anim = 1.0; // Reset Cooldown (1 sec)
+                    
+                    // Visual Telegraph
                     if(this.type > 0) game.particles.push({type:'charge', x:this.x, y:this.y, col:this.col, life:30});
-                    setTimeout(() => {
-                        if(!this.dead && getDist(this, p) <= this.size+20) {
-                            p.takeDamage(this.atk);
-                            if(this.type>0) game.particles.push({type:'shock', x:p.x, y:p.y, col:'#f00', life:15});
-                        }
-                    }, 500);
+                    
+                    // Deal Damage (Instant for normal, delayed for elite/boss feel)
+                    // Simplified: All instant but checked again
+                    if(!this.dead && getDist(this, p) <= this.size + 30) {
+                        p.takeDamage(this.atk);
+                        if(this.type>0) game.particles.push({type:'shock', x:p.x, y:p.y, col:'#f00', life:15});
+                    }
                 }
             } else {
+                // Chase
                 const ang = Math.atan2(p.y - this.y, p.x - this.x);
-                this.x += Math.cos(ang) * this.spd;
-                this.y += Math.sin(ang) * this.spd;
+                const move = this.spd * 60 * dt;
+                this.x += Math.cos(ang) * move;
+                this.y += Math.sin(ang) * move;
             }
         }
-        if(this.anim > 0) this.anim--;
+        
+        // Cooldown tick
+        if(this.anim > 0) this.anim -= dt;
     }
 
-    bossBehavior(p, dist) {
-        this.patTimer++;
-        if(this.patTimer > 180) { 
+    bossBehavior(p, dist, dt) {
+        this.patTimer += dt;
+        if(this.patTimer > 3.0) { 
             this.patTimer = 0;
             const action = rand(0, 2);
             if(action === 0) { // AoE
@@ -620,13 +658,14 @@ class Monster extends Entity {
                 const ang = Math.atan2(p.y - this.y, p.x - this.x);
                 this.x += Math.cos(ang) * 300; this.y += Math.sin(ang) * 300;
                 game.particles.push({type:'slash', x:this.x, y:this.y, ang:ang, life:20, col:'#fff'});
-                if(getDist(this, p) < 50) p.takeDamage(this.atk);
+                if(getDist(this, p) < 80) p.takeDamage(this.atk);
             }
         }
         if(dist > 50) {
             const ang = Math.atan2(p.y - this.y, p.x - this.x);
-            this.x += Math.cos(ang) * (this.spd * 0.5);
-            this.y += Math.sin(ang) * (this.spd * 0.5);
+            const move = this.spd * 0.5 * 60 * dt;
+            this.x += Math.cos(ang) * move;
+            this.y += Math.sin(ang) * move;
         }
     }
 
@@ -642,9 +681,10 @@ class Monster extends Entity {
                 spawnFloat("LEVEL UP", this.x, this.y-40, '#ff0');
                 game.ui.updatePanel();
             }
-            if(this.type===2 && game.activeBoss === this) {
-                document.getElementById('boss-ui').style.display = 'none';
+            if(this.type===2) {
                 game.activeBoss = null;
+                document.getElementById('boss-ui').style.display = 'none';
+                game.bossRespawn[this.bossInfo.name] = Date.now() + 60000;
             }
             this.drop();
         }
@@ -673,10 +713,12 @@ class Game {
         this.cam = { x:0, y:0 };
         this.frame = 0;
         this.activeBoss = null;
+        this.bossRespawn = {}; 
         
         this.ui = new UI(this);
         this.smith = new Smith(this);
         
+        this.lastTime = 0;
         this.init();
     }
 
@@ -722,7 +764,7 @@ class Game {
         });
         CANVAS.width = SCREEN_W; CANVAS.height = SCREEN_H;
 
-        if(localStorage.getItem('rpg_v11') || localStorage.getItem('rpg_v10')) {
+        if(localStorage.getItem('rpg_v12') || localStorage.getItem('rpg_v11')) {
             this.load();
             document.getElementById('job-select').style.display = 'none';
         }
@@ -745,11 +787,16 @@ class Game {
         log(`${JOBS[id].n}로 모험을 시작합니다.`);
     }
 
-    loop() {
+    loop(timestamp) {
+        if (!this.lastTime) this.lastTime = timestamp;
+        const dt = (timestamp - this.lastTime) / 1000; 
+        this.lastTime = timestamp;
+        const safeDt = Math.min(dt, 0.1);
+
         this.frame++;
         
         this.monsters = this.monsters.filter(m => !m.dead);
-        if(this.monsters.length < 100) { 
+        if(this.monsters.filter(m=>m.type!==2).length < 200) { 
             const z = ZONES[rand(0, ZONES.length-1)];
             const mx = rand(z.x, z.x+z.w);
             const my = rand(z.y, z.y+z.h);
@@ -761,9 +808,19 @@ class Game {
             }
         }
 
-        this.activeBoss = null;
-        this.player.update();
-        this.monsters.forEach(m => m.update(this.player));
+        BOSS_SPOTS.forEach(b => {
+            const exists = this.monsters.some(m => m.type === 2 && m.bossInfo.name === b.name);
+            if(!exists) {
+                const respawnTime = this.bossRespawn[b.name] || 0;
+                if(Date.now() > respawnTime) {
+                    const boss = new Monster(ZONES[b.lv-1], b);
+                    this.monsters.push(boss);
+                }
+            }
+        });
+
+        this.player.update(safeDt);
+        this.monsters.forEach(m => m.update(this.player, safeDt));
 
         const bossUi = document.getElementById('boss-ui');
         if(this.activeBoss && !this.activeBoss.dead) {
@@ -790,7 +847,7 @@ class Game {
              if(t.x+t.r > this.cam.x && t.x-t.r < this.cam.x+SCREEN_W) {
                  ctx.fillStyle = 'rgba(0,0,0,0.5)';
                  ctx.beginPath(); ctx.arc(t.x-this.cam.x, t.y-this.cam.y, t.r, 0, Math.PI*2); ctx.fill();
-                 ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = "14px serif";
+                 ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = "16px serif";
                  ctx.fillText(t.name, t.x-this.cam.x, t.y-this.cam.y);
              }
         });
@@ -816,7 +873,7 @@ class Game {
 
         this.particles = this.particles.filter(p => p.life > 0);
         this.particles.forEach(p => {
-            p.update && p.update();
+            p.update && p.update(safeDt);
             if(p.type === 'text') p.draw(ctx, this.cam);
             else if(p.type === 'slash') {
                 ctx.save(); 
@@ -824,16 +881,16 @@ class Game {
                 ctx.rotate(p.ang);
                 ctx.globalCompositeOperation = 'lighter';
                 ctx.fillStyle = p.col;
-                // V11: Better Crescent Shape
                 ctx.beginPath();
                 ctx.arc(0, 0, 50, -0.8, 0.8);
                 ctx.arc(10, 0, 40, 0.8, -0.8, true);
                 ctx.fill();
                 ctx.restore(); 
-                p.life--;
+                p.life -= 60 * safeDt;
             }
             else if(p.type === 'proj') {
-                p.x += (p.tx - p.x) * 0.2; p.y += (p.ty - p.y) * 0.2;
+                p.x += (p.tx - p.x) * 2.0 * safeDt; 
+                p.y += (p.ty - p.y) * 2.0 * safeDt;
                 ctx.save();
                 ctx.globalCompositeOperation = 'lighter';
                 ctx.fillStyle = p.col; ctx.beginPath(); ctx.arc(p.x-this.cam.x, p.y-this.cam.y, p.size||6, 0, Math.PI*2); ctx.fill();
@@ -841,7 +898,7 @@ class Game {
                 ctx.beginPath(); ctx.arc(p.x-this.cam.x - (p.tx-p.x)*0.1, p.y-this.cam.y - (p.ty-p.y)*0.1, p.size||4, 0, Math.PI*2); ctx.fill();
                 ctx.restore();
                 if(p.enemy && getDist(p, this.player) < 20) { this.player.takeDamage(p.atk); p.life=0; }
-                p.life--;
+                p.life -= 60 * safeDt;
             }
             else if(p.type === 'explosion') {
                 ctx.save();
@@ -849,32 +906,31 @@ class Game {
                 ctx.fillStyle = p.col; ctx.globalAlpha = p.life/30;
                 ctx.beginPath(); ctx.arc(p.x-this.cam.x, p.y-this.cam.y, p.size||50, 0, Math.PI*2); ctx.fill();
                 ctx.restore();
-                p.life--;
+                p.life -= 60 * safeDt;
             }
             else if(p.type === 'aoe_warn') {
                  ctx.strokeStyle = '#f00'; ctx.lineWidth = 2; ctx.globalAlpha = 0.5;
                  ctx.beginPath(); ctx.arc(p.x-this.cam.x, p.y-this.cam.y, p.size, 0, Math.PI*2); ctx.stroke();
                  ctx.fillStyle = 'rgba(255,0,0,0.2)'; ctx.fill(); ctx.globalAlpha = 1.0;
-                 p.life--;
+                 p.life -= 60 * safeDt;
             }
             else if(p.type === 'chain') {
                 ctx.save(); ctx.globalCompositeOperation = 'lighter';
                 ctx.strokeStyle = p.col; ctx.lineWidth = 2;
                 ctx.beginPath(); ctx.moveTo(p.x-this.cam.x, p.y-this.cam.y);
-                // Zigzag lightning
                 const midX = (p.x + p.tx)/2 + rand(-20,20);
                 const midY = (p.y + p.ty)/2 + rand(-20,20);
                 ctx.lineTo(midX-this.cam.x, midY-this.cam.y);
                 ctx.lineTo(p.tx-this.cam.x, p.ty-this.cam.y);
-                ctx.stroke(); ctx.restore(); p.life--;
+                ctx.stroke(); ctx.restore(); p.life -= 60 * safeDt;
             }
-            else if(p.type === 'shock' || p.type === 'spin' || p.type === 'aura') {
+            else if(p.type === 'shock' || p.type === 'spin' || p.type === 'aura' || p.type === 'charge') {
                 ctx.save();
                 ctx.globalCompositeOperation = 'lighter';
                 ctx.strokeStyle = p.col; ctx.lineWidth = 2;
                 ctx.beginPath(); ctx.arc(p.x-this.cam.x, p.y-this.cam.y, (40-p.life)*2, 0, Math.PI*2); ctx.stroke(); 
                 ctx.restore();
-                p.life--;
+                p.life -= 60 * safeDt;
             }
         });
 
@@ -898,20 +954,20 @@ class Game {
             stats: p.stats, job: p.job, potions: p.potions,
             inv: p.inv, eq: p.eq, x: p.x, y: p.y
         };
-        localStorage.setItem('rpg_v11', JSON.stringify(saveData));
+        localStorage.setItem('rpg_v13', JSON.stringify(saveData));
         if(manual) alert("저장되었습니다.");
     }
 
     reset() {
         if(confirm("정말 초기화하시겠습니까?")) {
-            localStorage.removeItem('rpg_v11');
+            localStorage.removeItem('rpg_v13');
             location.reload();
         }
     }
 
     load() {
         try {
-            let json = localStorage.getItem('rpg_v11') || localStorage.getItem('rpg_v10');
+            let json = localStorage.getItem('rpg_v13') || localStorage.getItem('rpg_v12');
             if(json) {
                 const d = JSON.parse(json);
                 const p = this.player;
@@ -948,6 +1004,7 @@ class UI {
         document.getElementById('u-lv').innerText = p.level;
         document.getElementById('u-gold').innerText = p.gold.toLocaleString();
         document.getElementById('u-pot').innerText = p.potions;
+        document.getElementById('u-zone').innerText = getZoneName(p.x, p.y);
         
         document.getElementById('hp-bar').style.width = (p.hp/p.maxHp*100)+'%';
         document.getElementById('mp-bar').style.width = (p.mp/p.maxMp*100)+'%';
