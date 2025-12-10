@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>RPG V6: Fixed UI</title>
+    <style>
+        /* CSS Styles */
+        body { margin: 0; overflow: hidden; background: #050505; color: #ccc; font-family: 'Segoe UI', sans-serif; user-select: none; }
+        canvas { display: block; cursor: crosshair; }
+
+        /* UI Base */
+        .ui-win { position: absolute; background: rgba(16, 18, 20, 0.9); border: 1px solid #444; border-radius: 4px; padding: 8px; box-shadow: 0 0 15px #000; pointer-events: auto; }
+        .ui-head { background: linear-gradient(90deg, #222, #333); color: #ec0; padding: 5px; text-align: center; font-weight: bold; border-bottom: 1px solid #555; margin: -8px -8px 8px -8px; border-radius: 4px 4px 0 0; font-size: 13px; }
+        button { background: #333; border: 1px solid #555; color: #ddd; padding: 4px 10px; cursor: pointer; font-size: 11px; transition: 0.1s; }
+        button:hover { background: #555; color: #fff; border-color: #888; }
+        .btn-close { float: right; background: #622; border-color: #844; }
+
+        /* HUD */
+        #hud { top: 10px; left: 10px; width: 260px; }
+        .bar-wrap { background: #111; height: 14px; border: 1px solid #333; margin-bottom: 3px; position: relative; }
+        .bar-fill { height: 100%; transition: width 0.1s linear; } /* Smooth transition */
+        .bar-txt { position: absolute; top: 0; left: 0; width: 100%; text-align: center; font-size: 10px; line-height: 14px; color: #fff; text-shadow: 1px 1px 0 #000; }
+        
+        /* Skill Bar */
+        #skill-bar { bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; }
+        .skill-slot { width: 50px; height: 50px; background: #222; border: 2px solid #555; position: relative; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; color: #777; }
+        .skill-cd { position: absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; color:#fff; font-size:16px; display:none; border: 1px solid #f00; }
+        .key-hint { position: absolute; top:2px; left:2px; font-size:10px; color:#aaa; }
+
+        /* Right Panel */
+        #panel { top: 10px; right: 10px; width: 280px; max-height: 90vh; display: flex; flex-direction: column; }
+        #inv-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; max-height: 200px; overflow-y: auto; background: #080808; padding: 3px; border: 1px inset #333; }
+        .slot { width: 40px; height: 40px; background: #1a1a1a; border: 1px solid #333; position: relative; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 9px; text-align: center; }
+        .slot:hover { border-color: #aaa; background: #2a2a2a; }
+
+        /* Rarity Effects */
+        .r-0 { border-color: #555; color: #aaa; }
+        .r-1 { border-color: #282; color: #4f4; }
+        .r-2 { border-color: #248; color: #4af; }
+        .r-3 { border-color: #628; color: #d4f; }
+        .r-4 { border-color: #a60; color: #fa0; box-shadow: inset 0 0 5px #a60; }
+        .r-5 { border-color: #900; color: #f22; animation: pulse 1.5s infinite; }
+        .r-6 { border-color: #0ff; color: #0ff; box-shadow: 0 0 10px #0ff; animation: glow 1s infinite alternate; }
+        
+        /* Modals */
+        .modal { top: 50%; left: 50%; transform: translate(-50%, -50%); width: 400px; display: none; z-index: 100; }
+        
+        /* Chat */
+        #chat { bottom: 10px; left: 10px; width: 350px; height: 200px; background: rgba(0,0,0,0.5); pointer-events: none; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; }
+        .msg { font-size: 12px; text-shadow: 1px 1px 0 #000; padding: 1px; }
+        .c-sys { color: #aaa; } .c-get { color: #0f0; } .c-dmg { color: #f55; } .c-rare { color: #fa0; font-weight: bold; }
+
+        /* Boss Bar */
+        #boss-ui { position: absolute; top: 80px; left: 50%; transform: translateX(-50%); width: 500px; display: none; pointer-events: none; }
+        #boss-hp { width: 100%; height: 20px; background: #300; border: 2px solid #f00; }
+        #boss-fill { width: 100%; height: 100%; background: #f00; transition: width 0.1s; }
+
+        @keyframes pulse { 0% { border-color: #f00; } 50% { border-color: #800; } 100% { border-color: #f00; } }
+        @keyframes glow { from { box-shadow: 0 0 5px #0ff; } to { box-shadow: 0 0 15px #0ff; } }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <canvas id="gameCanvas"></canvas>
+    <div id="boss-ui"><div style="text-align:center; color:#f55; font-weight:bold; text-shadow:1px 1px 0 #000;">BOSS</div><div id="boss-hp"><div id="boss-fill"></div></div></div>
+
+    <!-- HUD -->
+    <div id="hud" class="ui-win">
+        <div class="ui-head"><span id="u-name">Player</span> (Lv.<span id="u-lv">1</span>) <span style="font-size:10px; color:#aaa" id="u-job">전사</span></div>
+        <div class="bar-wrap"><div id="hp-bar" class="bar-fill" style="background:#c33; width:100%"></div><div class="bar-txt">HP</div></div>
+        <div class="bar-wrap"><div id="mp-bar" class="bar-fill" style="background:#33c; width:100%"></div><div class="bar-txt">MP</div></div>
+        <div class="bar-wrap"><div id="exp-bar" class="bar-fill" style="background:#ca0; width:0%"></div><div class="bar-txt">EXP</div></div>
+        <div style="font-size:11px; display:flex; justify-content:space-between; margin-top:4px;">
+            <span style="color:gold">GOLD: <span id="u-gold">0</span></span>
+            <span style="color:#aaa" id="u-zone">지역</span>
+        </div>
+    </div>
+
+    <!-- Skill Bar -->
+    <div id="skill-bar">
+        <div class="skill-slot" id="slot-q"><span class="key-hint">Q</span><span class="icon">⚔️</span><div class="skill-cd" id="cd-q"></div></div>
+        <div class="skill-slot" id="slot-w"><span class="key-hint">W</span><span class="icon">🌪️</span><div class="skill-cd" id="cd-w"></div></div>
+        <div class="skill-slot" id="slot-e"><span class="key-hint">E</span><span class="icon">⚡</span><div class="skill-cd" id="cd-e"></div></div>
+        <div class="skill-slot" style="border-color:#a33"><span class="key-hint">P</span>🧪<span style="position:absolute; bottom:2px; right:2px; font-size:10px;" id="u-pot">0</span></div>
+    </div>
+
+    <!-- Right Panel -->
+    <div id="panel" class="ui-win">
+        <div class="ui-head">정보</div>
+        <div style="font-size:11px; margin-bottom:5px;">
+            공격력: <span id="st-atk">0</span> | 방어력: <span id="st-def">0</span><br>
+            스탯 포인트: <span id="st-pt" style="color:#f55">0</span>
+        </div>
+        <div style="display:flex; gap:2px; margin-bottom:5px;">
+            <button onclick="game.player.upStat('str')">힘</button>
+            <button onclick="game.player.upStat('dex')">민첩</button>
+            <button onclick="game.player.upStat('con')">체력</button>
+        </div>
+        <div style="border-top:1px solid #444; padding-top:5px;">
+            <div style="font-size:11px; color:#888;">장비</div>
+            <div style="display:flex; gap:5px;">
+                <div id="eq-w" class="slot">무기</div>
+                <div id="eq-a" class="slot">갑옷</div>
+            </div>
+        </div>
+        <div class="ui-head" style="margin-top:10px;">인벤토리 (<span id="inv-cnt">0</span>)</div>
+        <div id="inv-grid"></div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:2px; margin-top:5px;">
+            <button onclick="game.ui.toggleShop()">상점</button>
+            <button onclick="game.ui.toggleSmith()">대장간</button>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="shop-modal" class="ui-win modal">
+        <div class="ui-head">상점 <button class="btn-close" onclick="game.ui.closeModals()">X</button></div>
+        <div id="shop-list" style="max-height:300px; overflow-y:auto;"></div>
+    </div>
+    
+    <div id="smith-modal" class="ui-win modal">
+        <div class="ui-head">대장간 <button class="btn-close" onclick="game.ui.closeModals()">X</button></div>
+        <div style="padding:10px; text-align:center;">
+            <div id="smith-slot" class="slot" style="margin:0 auto 10px auto; width:60px; height:60px;" onclick="game.smith.clear()">선택</div>
+            <button style="width:100%; padding:10px;" onclick="game.smith.upgrade()">강화 (1000G)</button>
+            <div style="margin-top:10px; font-size:11px; color:#aaa;">인벤토리에서 아이템을 클릭하여 등록</div>
+        </div>
+    </div>
+
+    <!-- Job Select -->
+    <div id="job-select" class="ui-win modal" style="display:block; text-align:center;">
+        <div class="ui-head">직업 선택</div>
+        <div style="padding:20px;">
+            <button style="font-size:14px; padding:10px; width:100%; margin-bottom:5px;" onclick="game.setJob(0)">전사 (근접/밸런스)</button>
+            <button style="font-size:14px; padding:10px; width:100%; margin-bottom:5px;" onclick="game.setJob(1)">궁수 (원거리/속도)</button>
+            <button style="font-size:14px; padding:10px; width:100%;" onclick="game.setJob(2)">마법사 (광역/폭딜)</button>
+        </div>
+    </div>
+
+    <div id="chat"></div>
+</div>
+
+<script>
+/**
+ * Config & Constants
+ */
+const CANVAS = document.getElementById('gameCanvas');
+const CTX = CANVAS.getContext('2d');
+let SCREEN_W = window.innerWidth;
+let SCREEN_H = window.innerHeight;
+const WORLD_W = 6000;
+const WORLD_H = 6000;
+
+// Zones
+const ZONES = [
+    { name: "평화의 숲", color: "#1a2b1a", x: 0, y: 0, w: 3000, h: 3000, lv: 1 },
+    { name: "황무지", color: "#3d3018", x: 3000, y: 0, w: 3000, h: 3000, lv: 2 },
+    { name: "설원", color: "#15202b", x: 0, y: 3000, w: 3000, h: 3000, lv: 3 },
+    { name: "지옥", color: "#220505", x: 3000, y: 3000, w: 3000, h: 3000, lv: 4 }
+];
+
+const TOWNS = [
+    { name: "메인 마을", x: 1500, y: 1500, r: 400 },
+    { name: "사막 전초기지", x: 4500, y: 1500, r: 300 },
+    { name: "얼음 요새", x: 1500, y: 4500, r: 300 },
+    { name: "최후의 보루", x: 4500, y: 4500, r: 300 }
+];
+
+const RARITY = [
+    { n: '일반', c: '#aaa', cl: 'r-0', m: 1 },
+    { n: '고급', c: '#4f4', cl: 'r-1', m: 1.3 },
+    { n: '희귀', c: '#4af', cl: 'r-2', m: 1.8 },
+    { n: '영웅', c: '#d4f', cl: 'r-3', m: 2.5 },
+    { n: '전설', c: '#fa0', cl: 'r-4', m: 4.0 },
+    { n: '신화', c: '#f22', cl: 'r-5', m: 7.0 },
+    { n: '태고', c: '#0ff', cl: 'r-6', m: 12.0 }
+];
+
+const JOBS = [
+    { n: '전사', hp: 1.2, mp: 0.8, range: 60, skills: ['강타', '휠윈드', '전투함성'] },
+    { n: '궁수', hp: 0.8, mp: 1.0, range: 250, skills: ['더블샷', '화살비', '회피사격'] },
+    { n: '마법사', hp: 0.7, mp: 1.5, range: 200, skills: ['파이어볼', '블리자드', '텔레포트'] }
+];
+
+/**
+ * Utils
+ */
+function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+function getDist(e1, e2) { return Math.hypot(e1.x - e2.x, e1.y - e2.y); }
+function clamp(v, min, max) { return Math.min(Math.max(v, min), max); }
+function log(msg, type='c-sys') {
+    const p = document.getElementById('chat');
+    p.innerHTML += `<div class="msg ${type}">${msg}</div>`;
+    p.scrollTop = p.scrollHeight;
+}
+function spawnFloat(txt, x, y, col) {
+    game.particles.push({
+        type: 'text', txt: txt, x: x, y: y, col: col, life: 60,
+        update: function() { this.y -= 0.5; this.life--; },
+        draw: function(ctx, cam) {
+            ctx.fillStyle = this.col; ctx.font = "bold 12px sans-serif";
+            ctx.fillText(this.txt, this.x - cam.x, this.y - cam.y);
+        }
+    });
+}
+
+/**
+ * Classes
+ */
+class Item {
+    constructor(lv, type) {
+        this.id = Math.random().toString(36).substr(2);
+        this.type = type || (Math.random()<0.5 ? 'w' : 'a'); // w:weapon, a:armor, s:stone
+        if(type === 's') {
+            this.name = "각인석"; this.rarity = 2; this.price = 200; return;
+        }
+        
+        // Rarity Roll
+        const r = Math.random();
+        let ri = 0;
+        if(r < 0.001) ri = 6;
+        else if(r < 0.005) ri = 5;
+        else if(r < 0.02) ri = 4;
+        else if(r < 0.08) ri = 3;
+        else if(r < 0.25) ri = 2;
+        else if(r < 0.5) ri = 1;
+
+        const info = RARITY[ri];
+        this.rarity = ri;
+        this.power = Math.floor((lv * 2 + 5) * info.m * rand(90,110)/100);
+        this.up = 0;
+        this.engrave = null;
+        this.name = `${info.n} ${this.type==='w'?'검':'갑옷'}`;
+        this.price = Math.floor(this.power * 5);
+
+        // High Tier Effect
+        if(ri >= 4) {
+            const effects = ['번개', '화염', '빙결'];
+            this.effect = effects[rand(0,2)];
+            this.name = `${this.effect}의 ${this.name}`;
+        }
+    }
+}
+
+class Entity {
+    constructor(x, y, sz, col) {
+        this.x = x; this.y = y; this.size = sz; this.col = col;
+        this.hp = 100; this.maxHp = 100; this.dead = false;
+        this.anim = 0; 
+    }
+    draw(ctx, cam) {
+        if(this.x < cam.x-50 || this.x > cam.x+SCREEN_W+50 || this.y < cam.y-50 || this.y > cam.y+SCREEN_H+50) return;
+        
+        // Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath(); ctx.ellipse(this.x-cam.x, this.y+this.size/2-cam.y, this.size/1.5, this.size/3, 0, 0, Math.PI*2); ctx.fill();
+
+        // Body
+        ctx.fillStyle = this.col;
+        ctx.fillRect(this.x - this.size/2 - cam.x, this.y - this.size/2 - cam.y, this.size, this.size);
+
+        // HP Bar
+        const rx = this.x - 15 - cam.x; const ry = this.y - this.size - 8 - cam.y;
+        ctx.fillStyle = '#000'; ctx.fillRect(rx, ry, 30, 4);
+        ctx.fillStyle = (this.hp/this.maxHp)>0.5 ? '#0f0' : '#f00';
+        ctx.fillRect(rx, ry, 30 * (this.hp/this.maxHp), 4);
+    }
+}
+
+class Player extends Entity {
+    constructor() {
+        super(1500, 1500, 20, '#fff');
+        this.level = 1; this.exp = 0; this.maxExp = 100;
+        this.gold = 0; this.inv = []; this.eq = { w:null, a:null };
+        this.stats = { str:5, dex:5, con:5, pt:0 };
+        this.job = 0;
+        this.mp = 100; this.maxMp = 100;
+        this.potions = 5;
+        this.target = null; this.dest = null;
+        this.lastAtk = 0;
+        this.skills = { q:0, w:0, e:0 }; // Cooldowns
+        this.spd = 4;
+        this.atkAnim = 0;
+    }
+
+    update() {
+        if(this.dead) return;
+        // Regen
+        if(game.frame % 60 === 0) {
+            this.hp = Math.min(this.maxHp, this.hp + this.stats.con*0.2);
+            this.mp = Math.min(this.maxMp, this.mp + 2);
+        }
+        // CD Reduction
+        for(let k in this.skills) if(this.skills[k]>0) this.skills[k]--;
+
+        // Move & Attack Logic
+        if(this.target && !this.target.dead) {
+            const range = JOBS[this.job].range;
+            const dist = getDist(this, this.target);
+            if(dist <= range) {
+                this.dest = null;
+                if(Date.now() - this.lastAtk > Math.max(200, 1000 - this.stats.dex*10)) {
+                    this.attack(this.target);
+                }
+            } else {
+                this.moveTo(this.target.x, this.target.y);
+            }
+        } else if(this.dest) {
+            if(getDist(this, this.dest) < 5) this.dest = null;
+            else this.moveTo(this.dest.x, this.dest.y);
+        }
+
+        if(this.atkAnim > 0) this.atkAnim--;
+    }
+
+    moveTo(tx, ty) {
+        const rad = Math.atan2(ty - this.y, tx - this.x);
+        this.x += Math.cos(rad) * this.spd;
+        this.y += Math.sin(rad) * this.spd;
+        this.x = clamp(this.x, 0, WORLD_W); this.y = clamp(this.y, 0, WORLD_H);
+    }
+
+    attack(t, multi=1.0, isSkill=false) {
+        this.lastAtk = Date.now();
+        this.atkAnim = 15;
+
+        let dmg = (this.stats.str * 2 + (this.eq.w ? this.eq.w.power + this.eq.w.up*5 : 0)) * multi;
+        let isCrit = false;
+        
+        if(this.eq.w && this.eq.w.engrave === 'crit' && Math.random() < 0.2) { dmg *= 2; isCrit = true; }
+        if(this.eq.w && this.eq.w.engrave === 'exe' && (t.hp/t.maxHp)<0.3) dmg *= 1.5;
+
+        if(this.job === 0) dmg *= 1.0; 
+        if(this.job === 1 && Math.random() < 0.3) dmg *= 1.5; 
+        if(this.job === 2) dmg *= 1.2; 
+
+        dmg = Math.floor(dmg * (0.9 + Math.random()*0.2));
+        t.takeDamage(dmg);
+
+        const ang = Math.atan2(t.y - this.y, t.x - this.x);
+        
+        if(!isSkill) {
+            game.particles.push({
+                type: 'swing', x: this.x, y: this.y, ang: ang, life: 10,
+                col: this.eq.w && this.eq.w.rarity >= 4 ? '#0ff' : '#fff'
+            });
+        }
+        
+        if(this.job !== 0 && !isSkill) {
+             game.particles.push({
+                type: 'proj', x: this.x, y: this.y, tx: t.x, ty: t.y, life: 20,
+                col: this.job===1 ? '#ff0' : '#0af'
+            });
+        }
+
+        spawnFloat(dmg, t.x, t.y-20, isCrit?'#ff0':'#fff');
+        
+        if(this.eq.w && this.eq.w.effect) {
+            if(Math.random() < 0.3) {
+                if(this.eq.w.effect === '번개') {
+                    spawnFloat("⚡", t.x, t.y-40, '#ff0');
+                    t.takeDamage(dmg * 0.5);
+                } else if(this.eq.w.effect === '폭발') {
+                    spawnFloat("💥", t.x, t.y-40, '#f50');
+                    t.takeDamage(dmg * 0.5);
+                }
+            }
+        }
+    }
+
+    useSkill(key) {
+        if(this.skills[key] > 0) return;
+        const j = JOBS[this.job];
+        
+        if(this.mp < 20) { log("MP가 부족합니다."); return; }
+        this.mp -= 20;
+
+        const cdBase = 300; 
+        this.skills[key] = cdBase;
+        
+        if(this.job === 0) { 
+            if(key==='q') { 
+                if(this.target) {
+                    this.attack(this.target, 2.5, true);
+                    game.particles.push({type:'shock', x:this.target.x, y:this.target.y, col:'#f00', life:20});
+                }
+            } else if(key==='w') { 
+                game.monsters.forEach(m => {
+                    if(getDist(this, m) < 100) { this.attack(m, 0.8, true); }
+                });
+                game.particles.push({type:'spin', x:this.x, y:this.y, col:'#fa0', life:20});
+            } else if(key==='e') { 
+                this.hp = Math.min(this.maxHp, this.hp + this.maxHp*0.3);
+                spawnFloat("HEAL", this.x, this.y-30, '#0f0');
+                game.particles.push({type:'aura', x:this.x, y:this.y, col:'#0f0', life:30});
+            }
+        } else if(this.job === 1) { 
+            if(key==='q') { 
+                if(this.target) { this.attack(this.target, 0.8, true); setTimeout(()=>this.attack(this.target, 0.8, true), 200); }
+            } else if(key==='w') { 
+                if(this.target) {
+                    for(let i=0; i<5; i++) {
+                        setTimeout(() => {
+                            game.particles.push({type:'proj', x:this.target.x+rand(-50,50), y:this.target.y-100, tx:this.target.x, ty:this.target.y, life:10, col:'#ff0'});
+                            this.attack(this.target, 0.4, true);
+                        }, i*100);
+                    }
+                }
+            } else if(key==='e') { 
+                const ang = this.target ? Math.atan2(this.y-this.target.y, this.x-this.target.x) : 0;
+                this.x += Math.cos(ang)*100; this.y += Math.sin(ang)*100;
+            }
+        } else if(this.job === 2) { 
+            if(key==='q') { 
+                if(this.target) {
+                    game.particles.push({type:'proj', x:this.x, y:this.y, tx:this.target.x, ty:this.target.y, life:30, col:'#f50', size:10});
+                    setTimeout(() => {
+                        this.attack(this.target, 3.0, true);
+                        game.particles.push({type:'shock', x:this.target.x, y:this.target.y, col:'#f50', life:30});
+                    }, 300);
+                }
+            } else if(key==='w') { 
+                 game.monsters.forEach(m => {
+                    if(getDist(this, m) < 200) { this.attack(m, 0.5, true); m.spd = 0.5; }
+                });
+                game.particles.push({type:'aura', x:this.x, y:this.y, col:'#0ff', life:40});
+            } else if(key==='e') { 
+                const ang = Math.random() * Math.PI * 2;
+                this.x += Math.cos(ang)*200; this.y += Math.sin(ang)*200;
+                game.particles.push({type:'shock', x:this.x, y:this.y, col:'#00f', life:20});
+            }
+        }
+        // UI Update handled in loop
+    }
+
+    takeDamage(d) {
+        const real = Math.max(1, d - (this.stats.con*0.5 + (this.eq.a ? this.eq.a.power : 0)));
+        this.hp -= real;
+        spawnFloat(Math.floor(real), this.x, this.y-20, '#f00');
+        if(this.hp <= 0) {
+            log("사망했습니다. 마을에서 부활합니다.", "c-dmg");
+            this.x=1500; this.y=1500; this.hp=this.maxHp; this.mp=this.maxMp;
+            this.dead = false;
+            game.save();
+        }
+    }
+    
+    // Trigger panel update for stat changes
+    upStat(type) {
+        if(this.stats.pt > 0) {
+            this.stats[type]++;
+            this.stats.pt--;
+            if(type === 'con') { this.maxHp += 10; this.hp += 10; }
+            game.ui.updatePanel();
+        }
+    }
+}
+
+class Monster extends Entity {
+    constructor(zone) {
+        let type = 0; // 0:Normal, 1:Elite, 2:Boss
+        if(Math.random() < 0.01) type = 2;
+        else if(Math.random() < 0.05) type = 1;
+
+        let x, y;
+        if(type===2) { x=zone.x+zone.w/2; y=zone.y+zone.h/2; }
+        else { x=rand(zone.x, zone.x+zone.w); y=rand(zone.y, zone.y+zone.h); }
+
+        let scale = zone.lv;
+        if(type===1) scale *= 2;
+        if(type===2) scale *= 5;
+
+        const cols = ['#4f4', '#da4', '#adf', '#f55'];
+        let col = cols[zone.lv-1];
+        if(type===1) col = '#fb0';
+        if(type===2) col = '#f00';
+
+        super(x, y, 20 + scale*4, col);
+        this.type = type;
+        this.name = type===2 ? `[BOSS] ${zone.name} 주인` : (type===1 ? `[Elite] ${zone.name} 수호자` : '몬스터');
+        this.level = scale * 5;
+        this.maxHp = 50 * scale * scale;
+        this.hp = this.maxHp;
+        this.atk = 5 * scale;
+        this.exp = 10 * scale;
+        this.gold = rand(5, 15) * scale;
+        this.spd = 1.5 + (Math.random()*0.5);
+    }
+
+    update(p) {
+        if(this.dead) return;
+        const dist = getDist(this, p);
+        
+        // Boss UI
+        if(this.type === 2 && dist < 600) {
+            document.getElementById('boss-ui').style.display = 'block';
+            document.getElementById('boss-fill').style.width = (this.hp/this.maxHp*100)+'%';
+        }
+
+        if(dist < 400) {
+            if(dist <= this.size+10) {
+                // Attack
+                if(this.anim === 0) {
+                    this.anim = 60; // Attack Cooldown
+                    // Visual Charge for elite/boss
+                    if(this.type > 0) game.particles.push({type:'charge', x:this.x, y:this.y, col:this.col, life:30});
+                    setTimeout(() => {
+                        if(!this.dead && getDist(this, p) <= this.size+20) {
+                            p.takeDamage(this.atk);
+                            // Flashy Hit
+                            if(this.type>0) game.particles.push({type:'shock', x:p.x, y:p.y, col:'#f00', life:15});
+                        }
+                    }, 500);
+                }
+            } else {
+                const ang = Math.atan2(p.y - this.y, p.x - this.x);
+                this.x += Math.cos(ang) * this.spd;
+                this.y += Math.sin(ang) * this.spd;
+            }
+        }
+        if(this.anim > 0) this.anim--;
+    }
+
+    takeDamage(d) {
+        this.hp -= d;
+        if(this.hp <= 0) {
+            this.dead = true;
+            game.player.exp += this.exp;
+            game.player.gold += this.gold;
+            if(game.player.exp >= game.player.maxExp) {
+                game.player.level++; game.player.exp=0; game.player.maxExp*=1.2;
+                game.player.stats.pt += 3; game.player.maxHp+=20; game.player.hp=game.player.maxHp;
+                spawnFloat("LEVEL UP", this.x, this.y-40, '#ff0');
+                game.ui.updatePanel();
+            }
+            if(this.type===2) document.getElementById('boss-ui').style.display = 'none';
+            this.drop();
+        }
+    }
+
+    drop() {
+        if(Math.random() < 0.3) {
+            const item = new Item(this.level);
+            game.player.inv.push(item);
+            log(`${item.name} 획득`, item.rarity>=3?'c-rare':'c-get');
+            game.ui.updatePanel();
+        }
+        if(this.type > 0 && Math.random() < 0.5) {
+            game.player.inv.push(new Item(1, 's'));
+            log("각인석 획득", 'c-rare');
+            game.ui.updatePanel();
+        }
+    }
+}
+
+class Game {
+    constructor() {
+        this.player = new Player();
+        this.monsters = [];
+        this.particles = [];
+        this.cam = { x:0, y:0 };
+        this.frame = 0;
+        
+        this.ui = new UI(this);
+        this.smith = new Smith(this);
+        
+        this.init();
+    }
+
+    init() {
+        // Input
+        CANVAS.addEventListener('mousedown', e => {
+            const r = CANVAS.getBoundingClientRect();
+            const wx = e.clientX - r.left + this.cam.x;
+            const wy = e.clientY - r.top + this.cam.y;
+            
+            // Check Mob Click
+            let t = null;
+            // Reverse loop to click top mob
+            for(let i=this.monsters.length-1; i>=0; i--) {
+                const m = this.monsters[i];
+                if(!m.dead && getDist({x:wx, y:wy}, m) < m.size+15) { t = m; break; }
+            }
+
+            if(t) {
+                this.player.target = t;
+                this.player.dest = null;
+                // Highlight
+                game.particles.push({type:'shock', x:t.x, y:t.y, col:'#f00', life:10, size:30});
+            } else {
+                this.player.target = null;
+                this.player.dest = {x:wx, y:wy};
+                game.particles.push({type:'shock', x:wx, y:wy, col:'#0f0', life:10, size:10});
+            }
+        });
+
+        window.addEventListener('keydown', e => {
+            if(['q','w','e'].includes(e.key.toLowerCase())) this.player.useSkill(e.key.toLowerCase());
+            if(e.key.toLowerCase() === 'p') {
+                if(this.player.potions > 0) {
+                    this.player.potions--;
+                    this.player.hp = Math.min(this.player.maxHp, this.player.hp + this.player.maxHp*0.5);
+                    spawnFloat("HP UP", this.player.x, this.player.y-30, '#0f0');
+                }
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            SCREEN_W = window.innerWidth; SCREEN_H = window.innerHeight;
+            CANVAS.width = SCREEN_W; CANVAS.height = SCREEN_H;
+        });
+        CANVAS.width = SCREEN_W; CANVAS.height = SCREEN_H;
+
+        // Auto Load
+        if(localStorage.getItem('rpg_v5')) {
+            this.load();
+            document.getElementById('job-select').style.display = 'none';
+        }
+        
+        this.ui.updatePanel(); // Initial Panel Update
+
+        this.loop = this.loop.bind(this);
+        requestAnimationFrame(this.loop);
+    }
+
+    setJob(id) {
+        this.player.job = id;
+        this.player.maxHp *= JOBS[id].hp; this.player.hp = this.player.maxHp;
+        this.player.maxMp *= JOBS[id].mp; this.player.mp = this.player.maxMp;
+        document.getElementById('job-select').style.display = 'none';
+        this.ui.updatePanel();
+        log(`${JOBS[id].n}로 모험을 시작합니다.`);
+    }
+
+    loop() {
+        this.frame++;
+        
+        // Spawning (High Density)
+        this.monsters = this.monsters.filter(m => !m.dead);
+        if(this.monsters.length < 150) { 
+            const z = ZONES[rand(0, ZONES.length-1)];
+            this.monsters.push(new Monster(z));
+        }
+
+        this.player.update();
+        this.monsters.forEach(m => m.update(this.player));
+
+        // Camera
+        this.cam.x = clamp(this.player.x - SCREEN_W/2, 0, WORLD_W - SCREEN_W);
+        this.cam.y = clamp(this.player.y - SCREEN_H/2, 0, WORLD_H - SCREEN_H);
+
+        // Render
+        const ctx = CTX;
+        ctx.fillStyle = '#111'; ctx.fillRect(0,0,SCREEN_W,SCREEN_H);
+
+        // Zones
+        ZONES.forEach(z => {
+            if(z.x+z.w > this.cam.x && z.x < this.cam.x+SCREEN_W && z.y+z.h > this.cam.y && z.y < this.cam.y+SCREEN_H) {
+                ctx.fillStyle = z.color; ctx.fillRect(z.x - this.cam.x, z.y - this.cam.y, z.w, z.h);
+            }
+        });
+        
+        // Towns
+        TOWNS.forEach(t => {
+             if(t.x+t.r > this.cam.x && t.x-t.r < this.cam.x+SCREEN_W) {
+                 ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                 ctx.beginPath(); ctx.arc(t.x-this.cam.x, t.y-this.cam.y, t.r, 0, Math.PI*2); ctx.fill();
+                 ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = "16px serif";
+                 ctx.fillText(t.name, t.x-this.cam.x, t.y-this.cam.y);
+             }
+        });
+
+        this.monsters.forEach(m => m.draw(ctx, this.cam));
+        this.player.draw(ctx, this.cam);
+
+        // Weapon Animation
+        if(this.player.atkAnim > 0) {
+            ctx.save();
+            ctx.translate(this.player.x - this.cam.x, this.player.y - this.cam.y);
+            let ang = 0;
+            if(this.player.target) ang = Math.atan2(this.player.target.y - this.player.y, this.player.target.x - this.player.x);
+            else if(this.player.dest) ang = Math.atan2(this.player.dest.y - this.player.y, this.player.dest.x - this.player.x);
+            
+            ctx.rotate(ang + (this.player.atkAnim/15)); // Swing effect
+            
+            ctx.fillStyle = this.player.eq.w ? RARITY[this.player.eq.w.rarity].c : '#ccc';
+            ctx.shadowBlur = this.player.eq.w && this.player.eq.w.rarity >= 4 ? 10 : 0;
+            ctx.shadowColor = ctx.fillStyle;
+            ctx.fillRect(10, -2, 30, 4); 
+            ctx.restore();
+        }
+
+        // Particles
+        this.particles = this.particles.filter(p => p.life > 0);
+        this.particles.forEach(p => {
+            p.update && p.update();
+            if(p.type === 'text') p.draw(ctx, this.cam);
+            else if(p.type === 'swing') {
+                ctx.strokeStyle = p.col; ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(p.x-this.cam.x, p.y-this.cam.y, 40, p.ang-1, p.ang+1);
+                ctx.stroke();
+                p.life--;
+            } else if(p.type === 'proj') {
+                p.x += (p.tx - p.x) * 0.2; p.y += (p.ty - p.y) * 0.2;
+                ctx.fillStyle = p.col; ctx.beginPath(); ctx.arc(p.x-this.cam.x, p.y-this.cam.y, p.size||5, 0, Math.PI*2); ctx.fill();
+                p.life--;
+            } else if(p.type === 'shock') {
+                ctx.strokeStyle = p.col; ctx.beginPath(); 
+                ctx.arc(p.x-this.cam.x, p.y-this.cam.y, (20-p.life)*2, 0, Math.PI*2); ctx.stroke();
+                p.life--;
+            } else if(p.type === 'spin') {
+                 ctx.strokeStyle = p.col; ctx.lineWidth=3; ctx.beginPath();
+                 ctx.arc(p.x-this.cam.x, p.y-this.cam.y, 60, 0, Math.PI*2); ctx.stroke();
+                 p.life--;
+            } else if(p.type === 'aura') {
+                 ctx.fillStyle = p.col; ctx.globalAlpha = p.life/30;
+                 ctx.beginPath(); ctx.arc(p.x-this.cam.x, p.y-this.cam.y, 40, 0, Math.PI*2); ctx.fill();
+                 ctx.globalAlpha = 1.0; p.life--;
+            } else if(p.type === 'charge') {
+                 ctx.strokeStyle = p.col; ctx.beginPath();
+                 ctx.moveTo(p.x-this.cam.x + rand(-20,20), p.y-this.cam.y + rand(-20,20));
+                 ctx.lineTo(p.x-this.cam.x, p.y-this.cam.y); ctx.stroke();
+                 p.life--;
+            }
+        });
+
+        // Target Ring
+        if(this.player.target && !this.player.target.dead) {
+            const t = this.player.target;
+            ctx.strokeStyle = '#f00'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(t.x-this.cam.x, t.y-this.cam.y, t.size+10, 0, Math.PI*2); ctx.stroke();
+        }
+
+        // Save Timer
+        if(this.frame % 3600 === 0) this.save();
+
+        // **KEY FIX**: Update HUD every frame for smooth bars/cooldowns
+        this.ui.updateHUD();
+
+        requestAnimationFrame(this.loop);
+    }
+
+    save() {
+        const d = { p: this.player, ts: Date.now() };
+        localStorage.setItem('rpg_v5', JSON.stringify(d));
+    }
+
+    load() {
+        try {
+            const d = JSON.parse(localStorage.getItem('rpg_v5'));
+            Object.assign(this.player, d.p);
+            this.player.inv = this.player.inv.map(i => { const n=new Item(1); Object.assign(n,i); return n; });
+            if(this.player.eq.w) { const n=new Item(1); Object.assign(n,this.player.eq.w); this.player.eq.w=n; }
+            if(this.player.eq.a) { const n=new Item(1); Object.assign(n,this.player.eq.a); this.player.eq.a=n; }
+            this.ui.updatePanel();
+            log("데이터 로드 완료.");
+        } catch(e) { console.error(e); }
+    }
+}
+
+class UI {
+    constructor(g) { this.g = g; }
+
+    // Fast updates (every frame)
+    updateHUD() {
+        const p = this.g.player;
+        document.getElementById('u-lv').innerText = p.level;
+        document.getElementById('u-gold').innerText = p.gold.toLocaleString();
+        document.getElementById('u-pot').innerText = p.potions;
+        
+        document.getElementById('hp-bar').style.width = (p.hp/p.maxHp*100)+'%';
+        document.getElementById('mp-bar').style.width = (p.mp/p.maxMp*100)+'%';
+        document.getElementById('exp-bar').style.width = (p.exp/p.maxExp*100)+'%';
+
+        // Skill CD
+        ['q','w','e'].forEach(k => {
+            const el = document.getElementById(`cd-${k}`);
+            if(p.skills[k] > 0) {
+                el.style.display = 'flex';
+                el.innerText = Math.ceil(p.skills[k]/60);
+            } else el.style.display = 'none';
+        });
+    }
+
+    // Heavy updates (events only)
+    updatePanel() {
+        const p = this.g.player;
+        document.getElementById('u-job').innerText = JOBS[p.job].n;
+        document.getElementById('st-atk').innerText = Math.floor(p.stats.str*2 + (p.eq.w?p.eq.w.power+p.eq.w.up*5:0));
+        document.getElementById('st-def').innerText = Math.floor(p.stats.con*0.5 + (p.eq.a?p.eq.a.power+p.eq.a.up*5:0));
+        document.getElementById('st-pt').innerText = p.stats.pt;
+        document.getElementById('inv-cnt').innerText = p.inv.length;
+
+        // Equip
+        const setEq = (id, it, type) => {
+            const el = document.getElementById(id);
+            el.innerHTML = it ? `<span style="color:${RARITY[it.rarity].c}">${it.name}</span>` : (type==='w'?'무기':'갑옷');
+            el.className = it ? `slot ${RARITY[it.rarity].cl}` : 'slot';
+            el.onclick = () => { if(it) { p.inv.push(it); if(type==='w') p.eq.w=null; else p.eq.a=null; this.updatePanel(); } };
+        };
+        setEq('eq-w', p.eq.w, 'w'); setEq('eq-a', p.eq.a, 'a');
+
+        // Inv
+        const grid = document.getElementById('inv-grid');
+        grid.innerHTML = '';
+        p.inv.forEach((it, i) => {
+            const d = document.createElement('div');
+            d.className = `slot ${RARITY[it.rarity].cl}`;
+            d.innerHTML = it.type==='s' ? '각인석' : it.name;
+            if(it.up > 0) d.innerHTML += ` (+${it.up})`;
+            d.onclick = () => {
+                if(document.getElementById('smith-modal').style.display==='block') {
+                    game.smith.sel(it, i);
+                } else if(it.type !== 's') {
+                    if(it.type==='w') { if(p.eq.w) p.inv.push(p.eq.w); p.eq.w=it; }
+                    else { if(p.eq.a) p.inv.push(p.eq.a); p.eq.a=it; }
+                    p.inv.splice(i, 1);
+                    this.updatePanel();
+                }
+            };
+            d.oncontextmenu = (e) => { e.preventDefault(); if(document.getElementById('shop-modal').style.display==='block') { p.gold+=it.price; p.inv.splice(i,1); this.updatePanel(); } };
+            grid.appendChild(d);
+        });
+    }
+
+    toggleShop() {
+        this.closeModals();
+        const p = this.g.player;
+        if(!TOWNS.some(t => getDist(p, t) < t.r)) { log("마을이 아닙니다."); return; }
+        document.getElementById('shop-modal').style.display='block';
+        const l = document.getElementById('shop-list'); l.innerHTML='';
+        const items = [
+            {n:'체력 물약 (10G)', p:10, f:()=>{p.potions++;}},
+            {n:'랜덤 장비 (500G)', p:500, f:()=>{p.inv.push(new Item(p.level));}},
+            {n:'고급 장비 (2000G)', p:2000, f:()=>{p.inv.push(new Item(p.level));}}
+        ];
+        items.forEach(i => {
+            const b = document.createElement('button');
+            b.innerText = i.n; b.style.width='100%'; b.style.marginBottom='5px';
+            b.onclick = () => { if(p.gold>=i.p) { p.gold-=i.p; i.f(); this.updatePanel(); } else log("골드 부족"); };
+            l.appendChild(b);
+        });
+        this.updatePanel();
+    }
+    toggleSmith() {
+        this.closeModals();
+        if(!TOWNS.some(t => getDist(this.g.player, t) < t.r)) { log("마을이 아닙니다."); return; }
+        document.getElementById('smith-modal').style.display='block';
+    }
+    closeModals() { document.querySelectorAll('.modal').forEach(e=>e.style.display='none'); }
+}
+
+class Smith {
+    constructor(g) { this.g = g; this.item = null; this.idx = -1; }
+    sel(it, i) {
+        if(it.type === 's') return;
+        this.item = it; this.idx = i;
+        const el = document.getElementById('smith-slot');
+        el.className = `slot ${RARITY[it.rarity].cl}`;
+        el.innerHTML = it.name;
+    }
+    clear() { this.item=null; document.getElementById('smith-slot').innerHTML='선택'; document.getElementById('smith-slot').className='slot'; }
+    upgrade() {
+        if(!this.item) return;
+        const p = this.g.player;
+        if(p.gold < 1000) { log("골드 부족"); return; }
+        p.gold -= 1000;
+        if(Math.random() < 0.7) {
+            this.item.up++; this.item.power += 5; log("강화 성공!", "c-get");
+        } else log("강화 실패...", "c-dmg");
+        this.g.ui.updatePanel();
+        this.sel(this.item, this.idx);
+    }
+}
+
+const game = new Game();
+</script>
+</body>
+</html>
