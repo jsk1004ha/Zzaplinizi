@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>RPG V13: Perfection</title>
+    <title>RPG V14: Hardcore Balance</title>
     <style>
         /* CSS Styles */
         body { margin: 0; overflow: hidden; background: #050505; color: #ccc; font-family: 'Segoe UI', sans-serif; user-select: none; }
@@ -191,7 +191,7 @@ let SCREEN_H = window.innerHeight;
 const WORLD_W = 12000;
 const WORLD_H = 12000;
 
-// Zones (V13 Expanded & Fixed)
+// Zones (V14)
 const ZONES = [
     { name: "평화의 숲", color: "#1a2b1a", x: 0, y: 0, w: 4000, h: 4000, lv: 1 },
     { name: "황무지", color: "#3d3018", x: 4000, y: 0, w: 4000, h: 4000, lv: 2 },
@@ -241,12 +241,13 @@ const ENGRAVES = [
     { id: 'greed', n: '탐욕' }, { id: 'dodge', n: '회피' }, { id: 'leech', n: '마나흡수' }
 ];
 
+// V14: Nerfed Ranged Classes (Spd & Aspd)
 const JOBS = [
-    { n: '전사', hp: 1.2, mp: 0.8, range: 60, spd: 3.0, skills: ['강타','휠윈드','함성'] },
-    { n: '궁수', hp: 0.8, mp: 1.0, range: 250, spd: 2.2, skills: ['더블샷','화살비','후퇴'] },
-    { n: '마법사', hp: 0.7, mp: 1.5, range: 200, spd: 2.2, skills: ['화염구','눈보라','이동'] },
-    { n: '암살자', hp: 0.9, mp: 1.0, range: 60, spd: 4.2, skills: ['기습','맹독','질주'] },
-    { n: '성기사', hp: 1.4, mp: 1.2, range: 60, spd: 3.0, skills: ['심판','방패','축복'] }
+    { n: '전사', hp: 1.2, mp: 0.8, range: 60, spd: 3.0, aspd: 1.0, skills: ['강타','휠윈드','함성'] },
+    { n: '궁수', hp: 0.8, mp: 1.0, range: 250, spd: 1.8, aspd: 1.2, skills: ['더블샷','화살비','후퇴'] }, // Nerfed
+    { n: '마법사', hp: 0.7, mp: 1.5, range: 200, spd: 1.8, aspd: 1.2, skills: ['화염구','눈보라','이동'] }, // Nerfed
+    { n: '암살자', hp: 0.9, mp: 1.0, range: 60, spd: 4.2, aspd: 0.8, skills: ['기습','맹독','질주'] },
+    { n: '성기사', hp: 1.4, mp: 1.2, range: 60, spd: 3.0, aspd: 1.0, skills: ['심판','방패','축복'] }
 ];
 
 /**
@@ -354,18 +355,15 @@ class Player extends Entity {
         this.skills = { q:0, w:0, e:0 }; 
         this.spd = 4;
         this.atkAnim = 0;
-        this.regenTimer = 0;
     }
 
     update(dt) {
         if(this.dead) return;
         this.updateEffects(dt);
         
-        this.regenTimer += dt;
-        if(this.regenTimer >= 1.0) { 
-            this.hp = Math.min(this.maxHp, this.hp + this.stats.con*0.2);
+        // V14: Removed Auto HP Regen
+        if(game.frame % 60 === 0) {
             this.mp = Math.min(this.maxMp, this.mp + 2);
-            this.regenTimer = 0;
         }
         
         for(let k in this.skills) if(this.skills[k]>0) this.skills[k] -= dt * 60;
@@ -386,7 +384,10 @@ class Player extends Entity {
                 }
 
                 if(dist <= range) {
-                    if(Date.now() - this.lastAtk > Math.max(200, 1000 - this.stats.dex*10)) {
+                    // V14: Aspd applied (Job multiplier)
+                    const aspdMult = JOBS[this.job].aspd || 1.0;
+                    const baseCd = Math.max(200, 1000 - this.stats.dex*10);
+                    if(Date.now() - this.lastAtk > baseCd * aspdMult) {
                         this.attack(this.target);
                     }
                 }
@@ -514,7 +515,7 @@ class Player extends Entity {
         }
     }
 
-    // V13: Fixed Damage Formula (Min 20% guaranteed)
+    // V14: New Damage Reduction Formula
     takeDamage(d, ignoreDef=false) {
         if(this.effects.some(e=>e.type==='shield')) d *= 0.5;
         if(this.eq.w && this.eq.w.engrave && this.eq.w.engrave.id === 'dodge' && Math.random() < 0.2) {
@@ -524,23 +525,30 @@ class Player extends Entity {
 
         const def = ignoreDef ? 0 : (this.stats.con*0.5 + (this.eq.a ? this.eq.a.power + this.eq.a.up*5 : 0));
         
-        // V13: Logic Change - Minimum damage is 20% of incoming damage, or raw difference, whichever is higher
-        // This prevents high defense from making you invincible (1 dmg) and fixes healing bug
-        const minDmg = d * 0.2; 
-        const calcDmg = d - def;
-        const real = Math.max(minDmg, calcDmg);
+        // V14 Formula: Reduction % = 600 / (600 + Def)
+        // Def 0 -> 100% dmg
+        // Def 600 -> 50% dmg
+        // Def 1800 -> 25% dmg
+        const reduction = 600 / (600 + def);
+        const real = Math.max(1, d * reduction);
         
-        // Final sanity check to ensure at least 1 damage if d > 0
-        const finalDmg = Math.max(1, Math.floor(real));
-
-        this.hp -= finalDmg;
-        spawnFloat(finalDmg, this.x, this.y-20, '#f00');
+        this.hp -= real;
+        spawnFloat(Math.floor(real), this.x, this.y-20, '#f00');
         
         if(this.hp <= 0) {
             log("사망했습니다.", "c-dmg");
             this.x=2000; this.y=2000; this.hp=this.maxHp; this.mp=this.maxMp;
             this.dead = false; this.effects = [];
             game.save();
+        }
+    }
+    
+    upStat(type) {
+        if(this.stats.pt > 0) {
+            this.stats[type]++;
+            this.stats.pt--;
+            if(type === 'con') { this.maxHp += 10; this.hp += 10; }
+            game.ui.updatePanel();
         }
     }
 }
@@ -555,7 +563,7 @@ class Monster extends Entity {
         if(type===2) { x=isBossInfo.x; y=isBossInfo.y; }
         else { x=rand(zone.x, zone.x+zone.w); y=rand(zone.y, zone.y+zone.h); }
 
-        let scale = zone.lv;
+        let scale = zone.lv; // Zone 1~8
         
         const cols = ['#4f4', '#da4', '#adf', '#f55', '#4d4', '#88f', '#666', '#a4a'];
         let col = cols[zone.lv-1];
@@ -565,21 +573,22 @@ class Monster extends Entity {
         super(x, y, 20 + scale*4, col);
         this.type = type;
         
+        // V14 Balance
         if(type === 2) {
             this.name = `[BOSS] ${isBossInfo.name}`;
             this.level = isBossInfo.lv * 10;
             this.maxHp = 500 * scale * scale; 
-            this.atk = 5 * scale * 25; // V13: Boss Atk Buffed to pierce Def
+            this.atk = 5 * scale * 25; 
             this.size = 60;
         } else {
             this.name = type===1 ? `[Elite] ${zone.name} 수호자` : '몬스터';
             this.level = scale * 5;
             this.maxHp = 50 * scale * scale;
-            this.atk = 5 * scale * 4; // V13: Normal Atk Buffed
+            this.atk = 5 * scale * 0.8; // V14: Normal 0.8x
             
             if(type === 1) { 
                 this.maxHp *= 3;
-                this.atk *= 1; 
+                this.atk = 5 * scale * 1.5; // V14: Elite 1.5x
                 this.size = 40;
             }
         }
@@ -590,7 +599,7 @@ class Monster extends Entity {
         this.spd = 1.5 + (Math.random()*0.5);
         this.patTimer = 0;
         this.bossInfo = isBossInfo;
-        this.anim = 0; // Attack Cooldown
+        this.anim = 0;
     }
 
     update(p, dt) {
@@ -607,25 +616,17 @@ class Monster extends Entity {
         }
 
         if(dist < 400) {
-            // V13: Improved Attack Logic
-            // If close enough
             if(dist <= this.size + 30) {
-                // If cooldown ready
                 if(this.anim <= 0) {
-                    this.anim = 1.0; // Reset Cooldown (1 sec)
-                    
-                    // Visual Telegraph
+                    this.anim = 1.0;
                     if(this.type > 0) game.particles.push({type:'charge', x:this.x, y:this.y, col:this.col, life:30});
                     
-                    // Deal Damage (Instant for normal, delayed for elite/boss feel)
-                    // Simplified: All instant but checked again
                     if(!this.dead && getDist(this, p) <= this.size + 30) {
                         p.takeDamage(this.atk);
                         if(this.type>0) game.particles.push({type:'shock', x:p.x, y:p.y, col:'#f00', life:15});
                     }
                 }
             } else {
-                // Chase
                 const ang = Math.atan2(p.y - this.y, p.x - this.x);
                 const move = this.spd * 60 * dt;
                 this.x += Math.cos(ang) * move;
@@ -633,7 +634,6 @@ class Monster extends Entity {
             }
         }
         
-        // Cooldown tick
         if(this.anim > 0) this.anim -= dt;
     }
 
@@ -642,19 +642,19 @@ class Monster extends Entity {
         if(this.patTimer > 3.0) { 
             this.patTimer = 0;
             const action = rand(0, 2);
-            if(action === 0) { // AoE
+            if(action === 0) { 
                 game.particles.push({type:'aoe_warn', x:p.x, y:p.y, life:60, size:100});
                 setTimeout(() => {
                     if(getDist(p, {x:p.x, y:p.y}) < 100) p.takeDamage(this.atk * 1.5);
                     game.particles.push({type:'explosion', x:p.x, y:p.y, col:'#f00', life:30, size:100});
                 }, 1000);
-            } else if(action === 1) { // Barrage
+            } else if(action === 1) { 
                 for(let i=0; i<5; i++) {
                     setTimeout(() => {
                         game.particles.push({type:'proj', x:this.x, y:this.y, tx:p.x+rand(-50,50), ty:p.y+rand(-50,50), life:40, col:'#f00', size:8, enemy:true, atk:this.atk});
                     }, i*100);
                 }
-            } else { // Dash
+            } else { 
                 const ang = Math.atan2(p.y - this.y, p.x - this.x);
                 this.x += Math.cos(ang) * 300; this.y += Math.sin(ang) * 300;
                 game.particles.push({type:'slash', x:this.x, y:this.y, ang:ang, life:20, col:'#fff'});
@@ -680,6 +680,7 @@ class Monster extends Entity {
                 game.player.stats.pt += 3; game.player.maxHp+=20; game.player.hp=game.player.maxHp;
                 spawnFloat("LEVEL UP", this.x, this.y-40, '#ff0');
                 game.ui.updatePanel();
+                game.save(); // V14 Save on Level Up
             }
             if(this.type===2) {
                 game.activeBoss = null;
@@ -696,11 +697,13 @@ class Monster extends Entity {
             game.player.inv.push(item);
             log(`${item.name} 획득`, item.rarity>=3?'c-rare':'c-get');
             game.ui.updatePanel();
+            game.save(); // V14 Save on Item
         }
         if(this.type > 0 && Math.random() < 0.5) {
             game.player.inv.push(new Item(1, 's'));
             log("각인석 획득", 'c-rare');
             game.ui.updatePanel();
+            game.save(); // V14 Save on Stone
         }
     }
 }
@@ -751,8 +754,8 @@ class Game {
             if(e.key.toLowerCase() === 'p') {
                 if(this.player.potions > 0) {
                     this.player.potions--;
-                    this.player.hp = Math.min(this.player.maxHp, this.player.hp + this.player.maxHp*0.5);
-                    spawnFloat("HP UP", this.player.x, this.player.y-30, '#0f0');
+                    this.player.hp = this.player.maxHp; // V14 Full Heal
+                    spawnFloat("FULL HP", this.player.x, this.player.y-30, '#0f0');
                 }
             }
             if(e.key === 'Escape') this.player.target = null;
@@ -764,7 +767,7 @@ class Game {
         });
         CANVAS.width = SCREEN_W; CANVAS.height = SCREEN_H;
 
-        if(localStorage.getItem('rpg_v12') || localStorage.getItem('rpg_v11')) {
+        if(localStorage.getItem('rpg_v14') || localStorage.getItem('rpg_v13') || localStorage.getItem('rpg_v12')) {
             this.load();
             document.getElementById('job-select').style.display = 'none';
         }
@@ -796,7 +799,8 @@ class Game {
         this.frame++;
         
         this.monsters = this.monsters.filter(m => !m.dead);
-        if(this.monsters.filter(m=>m.type!==2).length < 200) { 
+        // V14: Spawn Cap 300
+        if(this.monsters.filter(m=>m.type!==2).length < 300) { 
             const z = ZONES[rand(0, ZONES.length-1)];
             const mx = rand(z.x, z.x+z.w);
             const my = rand(z.y, z.y+z.h);
@@ -954,20 +958,21 @@ class Game {
             stats: p.stats, job: p.job, potions: p.potions,
             inv: p.inv, eq: p.eq, x: p.x, y: p.y
         };
-        localStorage.setItem('rpg_v13', JSON.stringify(saveData));
+        localStorage.setItem('rpg_v14', JSON.stringify(saveData));
         if(manual) alert("저장되었습니다.");
     }
 
     reset() {
         if(confirm("정말 초기화하시겠습니까?")) {
-            localStorage.removeItem('rpg_v13');
+            localStorage.removeItem('rpg_v14');
             location.reload();
         }
     }
 
     load() {
         try {
-            let json = localStorage.getItem('rpg_v13') || localStorage.getItem('rpg_v12');
+            // V14: Load Priority V14 -> V13 -> V12
+            let json = localStorage.getItem('rpg_v14') || localStorage.getItem('rpg_v13') || localStorage.getItem('rpg_v12');
             if(json) {
                 const d = JSON.parse(json);
                 const p = this.player;
